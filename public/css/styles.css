@@ -1,7 +1,79 @@
+/* ===== Global ===== */
+:root {
+    --accent: #0d6efd;
+    /* Bootstrap primary (Lux) */
+    --accent-2: #6610f2;
+    /* Purple */
+    --gold: #ffc107;
+}
+
 body {
     line-height: 1.6;
 }
 
+/* ===== Navbar ===== */
 .navbar-brand {
-    letter-spacing: 0.5px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.nav-link {
+    font-weight: 600;
+    margin-left: .8rem;
+}
+
+.nav-link:hover {
+    color: var(--gold) !important;
+    /* gold hover */
+}
+
+/* ===== Hero ===== */
+.hero {
+    min-height: 65vh;
+    padding: 7rem 0 4rem;
+    /* big, bold hero */
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 50%, #6f42c1 100%);
+    color: #fff;
+}
+
+.hero h1 {
+    letter-spacing: .3px;
+    font-weight: 800;
+}
+
+.gradient-text {
+    background: linear-gradient(90deg, #fff, #ffd966);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.hero .btn {
+    padding: .75rem 1.25rem;
+    border-width: 2px;
+}
+
+.hero .btn-outline-light:hover {
+    color: var(--accent);
+    background: #fff;
+    border-color: #fff;
+}
+
+/* ===== Footer ===== */
+footer {
+    background: #212529;
+    color: #adb5bd;
+}
+
+footer a {
+    color: #fff;
+}
+
+/* ===== Utility ===== */
+.btn-outline-secondary:hover {
+    border-color: var(--accent);
+    color: #fff;
+    background: var(--accent);
 }

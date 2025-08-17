@@ -1,26 +1,32 @@
 <%- include('partials/html-start', { title: 'Home' }) %>
     <%- include('partials/header') %>
 
-        <section class="text-center py-5">
-            <h1 class="display-5 fw-bold">Hi, I’m <%= site.name %>
-            </h1>
-            <p class="lead">
-                <%= site.role %>
-            </p>
-            <div class="mt-3 d-flex gap-2 justify-content-center">
-                <a class="btn btn-primary" href="/projects">See my projects</a>
-                <% if (site.cvUrl) { %>
-                    <a class="btn btn-outline-secondary" href="<%= site.cvUrl %>" target="_blank"
-                        rel="noopener">Download CV</a>
-                    <% } %>
+        <section class="hero d-flex align-items-center text-center">
+            <div class="container">
+                <h1 class="display-3 fw-bolder mb-3">Hi, I’m <span class="gradient-text">
+                        <%= site.name %>
+                    </span></h1>
+                <p class="lead mb-4">
+                    <%= site.role %>
+                </p>
+
+                <div class="d-flex gap-2 justify-content-center mb-4">
+                    <a class="btn btn-light btn-lg fw-semibold" href="/projects">See my projects</a>
+                    <% if (site.cvUrl) { %>
+                        <a class="btn btn-outline-light btn-lg fw-semibold" href="<%= site.cvUrl %>" target="_blank"
+                            rel="noopener">Download CV</a>
+                        <% } %>
+                </div>
+
+                <p class="text-white-50 mb-0">
+                    <%= site.location %> &middot;
+                        <a class="link-light text-decoration-underline" href="mailto:<%= site.email %>">
+                            <%= site.email %>
+                        </a>
+                        <% if (site.phone) { %> &middot; <%= site.phone %>
+                                <% } %>
+                </p>
             </div>
-            <p class="text-muted mt-3">
-                <%= site.location %> · <a href="mailto:<%= site.email %>">
-                        <%= site.email %>
-                    </a>
-                    <% if (site.phone) { %> · <%= site.phone %>
-                            <% } %>
-            </p>
         </section>
 
         <%- include('partials/footer') %>
