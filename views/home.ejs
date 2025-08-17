@@ -1,0 +1,27 @@
+<%- include('partials/html-start', { title: 'Home' }) %>
+    <%- include('partials/header') %>
+
+        <section class="text-center py-5">
+            <h1 class="display-5 fw-bold">Hi, I’m <%= site.name %>
+            </h1>
+            <p class="lead">
+                <%= site.role %>
+            </p>
+            <div class="mt-3 d-flex gap-2 justify-content-center">
+                <a class="btn btn-primary" href="/projects">See my projects</a>
+                <% if (site.cvUrl) { %>
+                    <a class="btn btn-outline-secondary" href="<%= site.cvUrl %>" target="_blank"
+                        rel="noopener">Download CV</a>
+                    <% } %>
+            </div>
+            <p class="text-muted mt-3">
+                <%= site.location %> · <a href="mailto:<%= site.email %>">
+                        <%= site.email %>
+                    </a>
+                    <% if (site.phone) { %> · <%= site.phone %>
+                            <% } %>
+            </p>
+        </section>
+
+        <%- include('partials/footer') %>
+            <%- include('partials/html-end') %>

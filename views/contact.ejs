@@ -1,0 +1,48 @@
+<%- include('partials/html-start', { title: 'Contact' }) %>
+    <%- include('partials/header') %>
+
+        <section class="container py-5">
+            <h1 class="mb-4">Contact</h1>
+
+            <% if (typeof sent !=="undefined" && sent) { %>
+                <div class="alert alert-success">Thanks! Your message has been sent.</div>
+                <% } %>
+
+                    <p class="text-muted mb-4">
+                        Prefer email? <a href="mailto:<%= site.email %>">
+                            <%= site.email %>
+                        </a>
+                        <% if (site.phone) { %> · Phone: <%= site.phone %>
+                                <% } %>
+                    </p>
+
+                    <form method="post" action="/contact" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Your Email</label>
+                            <input id="email" name="email" type="email" class="form-control" required />
+                            <div class="invalid-feedback">Please provide a valid email.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Message</label>
+                            <textarea id="message" name="message" class="form-control" rows="5" required></textarea>
+                            <div class="invalid-feedback">Please enter a message.</div>
+                        </div>
+
+                        <button class="btn btn-primary">Send</button>
+                    </form>
+
+                    <script>
+                        (function () {
+                            'use strict';
+                            const form = document.querySelector('form.needs-validation');
+                            form.addEventListener('submit', function (e) {
+                                if (!form.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
+                                form.classList.add('was-validated');
+                            }, false);
+                        })();
+                    </script>
+        </section>
+
+        <%- include('partials/footer') %>
+            <%- include('partials/html-end') %>

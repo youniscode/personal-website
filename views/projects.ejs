@@ -1,0 +1,48 @@
+<%- include('partials/html-start', { title: 'Projects' }) %>
+    <%- include('partials/header') %>
+
+        <section class="container py-5">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h1 class="mb-0">Projects</h1>
+                <% if (site.cvUrl) { %>
+                    <a class="btn btn-outline-secondary" href="<%= site.cvUrl %>" target="_blank"
+                        rel="noopener">Download CV</a>
+                    <% } %>
+            </div>
+
+            <!-- Placeholder cards; later we’ll render from MongoDB -->
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h2 class="h5 card-title">Personal Portfolio</h2>
+                            <p class="card-text">This website: Node.js + Express + EJS + Bootstrap. Will add blog, auth,
+                                and admin soon.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge text-bg-light">Express</span>
+                                <span class="badge text-bg-light">EJS</span>
+                                <span class="badge text-bg-light">Bootstrap</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h2 class="h5 card-title">Mini CRUD App</h2>
+                            <p class="card-text">Coming soon: a simple CRUD with MongoDB (Atlas) to practice models,
+                                routes, and forms.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge text-bg-light">MongoDB</span>
+                                <span class="badge text-bg-light">Mongoose</span>
+                                <span class="badge text-bg-light">Passport (planned)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <%- include('partials/footer') %>
+            <%- include('partials/html-end') %>

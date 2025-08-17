@@ -1,0 +1,60 @@
+<%- include('partials/html-start', { title: 'About' }) %>
+    <%- include('partials/header') %>
+
+        <section class="container py-5">
+            <h1 class="mb-4">About <%= site.name %>
+            </h1>
+
+            <p class="lead mb-4">
+                <%= site.role %>
+            </p>
+
+            <div class="row g-4">
+                <div class="col-md-7">
+                    <h2 class="h5">Summary</h2>
+                    <p>
+                        I’m <strong>
+                            <%= site.name %>
+                        </strong>, based in <%= site.location %>. I build modern web apps while working in hospitality.
+                            I’m trilingual and comfortable switching between product, UX, and code. This site is my
+                            learning-in-public
+                            project from Dr. Angela Yu’s bootcamp.
+                    </p>
+
+                    <h2 class="h5 mt-4">Contact</h2>
+                    <ul class="list-unstyled">
+                        <li>Email: <a href="mailto:<%= site.email %>">
+                                <%= site.email %>
+                            </a></li>
+                        <% if (site.phone) { %>
+                            <li>Phone: <%= site.phone %>
+                            </li>
+                            <% } %>
+                                <% if (site.linkedin) { %>
+                                    <li>LinkedIn: <a href="<%= site.linkedin %>" target="_blank" rel="noopener">
+                                            <%= site.linkedin %>
+                                        </a></li>
+                                    <% } %>
+                                        <% if (site.cvUrl) { %>
+                                            <li>CV: <a href="<%= site.cvUrl %>" target="_blank" rel="noopener">Download
+                                                    PDF</a></li>
+                                            <% } %>
+                    </ul>
+                </div>
+
+                <div class="col-md-5">
+                    <div class="p-3 border rounded">
+                        <h2 class="h6 text-uppercase text-muted mb-3">Quick Facts</h2>
+                        <ul class="mb-0">
+                            <li>Location: <%= site.location %>
+                            </li>
+                            <li>Stack: HTML, CSS/Bootstrap, JS, Node.js/Express, EJS</li>
+                            <li>Learning: MongoDB, Auth (Passport), Deployment (Render)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <%- include('partials/footer') %>
+            <%- include('partials/html-end') %>
