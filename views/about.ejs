@@ -1,58 +1,81 @@
 <%- include('partials/html-start', { title: 'About' }) %>
     <%- include('partials/header') %>
 
-        <section class="container py-5">
-            <h1 class="mb-4">About <%= site.name %>
-            </h1>
+        <section class="section">
+            <div class="container">
+                <h1 class="display-5 fw-bolder mb-2">About <%= site.name %>
+                </h1>
+                <p class="lead text-muted mb-4">
+                    <%= site.role %>
+                </p>
 
-            <p class="lead mb-4">
-                <%= site.role %>
-            </p>
+                <div class="row g-4">
+                    <!-- Main card -->
+                    <div class="col-lg-8">
+                        <div class="card shadow-sm rise h-100">
+                            <div class="card-body p-4">
+                                <h2 class="h5 text-uppercase text-muted mb-3">Summary</h2>
+                                <p class="mb-4">
+                                    I’m <strong>
+                                        <%= site.name %>
+                                    </strong>, based in <%= site.location %>. I build modern web apps while
+                                        working in hospitality. I’m trilingual (FR/EN/AR) and comfortable switching
+                                        between product, UX, and code.
+                                        This site is my learning-in-public project from Dr. Angela Yu’s bootcamp.
+                                </p>
 
-            <div class="row g-4">
-                <div class="col-md-7">
-                    <h2 class="h5">Summary</h2>
-                    <p>
-                        I’m <strong>
-                            <%= site.name %>
-                        </strong>, based in <%= site.location %>. I build modern web apps while working in hospitality.
-                            I’m trilingual and comfortable switching between product, UX, and code. This site is my
-                            learning-in-public
-                            project from Dr. Angela Yu’s bootcamp.
-                    </p>
+                                <h2 class="h6 text-uppercase text-muted mb-3">Skills</h2>
+                                <div class="d-flex flex-wrap gap-2 mb-4">
+                                    <span class="badge badge-soft-primary">HTML</span>
+                                    <span class="badge badge-soft-primary">CSS / Bootstrap</span>
+                                    <span class="badge badge-soft-primary">JavaScript</span>
+                                    <span class="badge badge-soft-primary">Node.js</span>
+                                    <span class="badge badge-soft-primary">Express</span>
+                                    <span class="badge badge-soft-primary">EJS</span>
+                                    <span class="badge badge-soft-secondary">MongoDB (learning)</span>
+                                    <span class="badge badge-soft-secondary">Auth / Passport (learning)</span>
+                                </div>
 
-                    <h2 class="h5 mt-4">Contact</h2>
-                    <ul class="list-unstyled">
-                        <li>Email: <a href="mailto:<%= site.email %>">
-                                <%= site.email %>
-                            </a></li>
-                        <% if (site.phone) { %>
-                            <li>Phone: <%= site.phone %>
-                            </li>
-                            <% } %>
-                                <% if (site.linkedin) { %>
-                                    <li>LinkedIn: <a href="<%= site.linkedin %>" target="_blank" rel="noopener">
-                                            <%= site.linkedin %>
+                                <h2 class="h6 text-uppercase text-muted mb-3">Contact</h2>
+                                <ul class="list-unstyled mb-0">
+                                    <li>Email: <a href="mailto:<%= site.email %>">
+                                            <%= site.email %>
                                         </a></li>
-                                    <% } %>
-                                        <% if (site.cvUrl) { %>
-                                            <li>CV: <a href="<%= site.cvUrl %>" target="_blank" rel="noopener">Download
-                                                    PDF</a></li>
-                                            <% } %>
-                    </ul>
-                </div>
-
-                <div class="col-md-5">
-                    <div class="p-3 border rounded">
-                        <h2 class="h6 text-uppercase text-muted mb-3">Quick Facts</h2>
-                        <ul class="mb-0">
-                            <li>Location: <%= site.location %>
-                            </li>
-                            <li>Stack: HTML, CSS/Bootstrap, JS, Node.js/Express, EJS</li>
-                            <li>Learning: MongoDB, Auth (Passport), Deployment (Render)</li>
-                        </ul>
+                                    <% if (site.phone) { %>
+                                        <li>Phone: <%= site.phone %>
+                                        </li>
+                                        <% } %>
+                                            <% if (site.cvUrl) { %>
+                                                <li>CV: <a href="<%= site.cvUrl %>" target="_blank"
+                                                        rel="noopener">Download PDF</a></li>
+                                                <% } %>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                </div>
+
+                    <!-- Sidebar card -->
+                    <div class="col-lg-4">
+                        <div class="card shadow-sm rise h-100">
+                            <div class="card-body p-4">
+                                <h2 class="h6 text-uppercase text-muted mb-3">Quick Facts</h2>
+                                <ul class="mb-3">
+                                    <li>Location: <%= site.location %>
+                                    </li>
+                                    <li>Stack: HTML, CSS/Bootstrap, JS, Node/Express, EJS</li>
+                                    <li>Next up: MongoDB, Auth, Deployments</li>
+                                </ul>
+
+                                <h3 class="h6 text-uppercase text-muted mb-2">Languages</h3>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge text-bg-dark">FR</span>
+                                    <span class="badge text-bg-dark">EN</span>
+                                    <span class="badge text-bg-dark">AR</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /row -->
             </div>
         </section>
 

@@ -77,3 +77,31 @@ footer a {
     color: #fff;
     background: var(--accent);
 }
+
+/* Sections */
+.section {
+    padding: 4rem 0 3rem;
+}
+
+/* Card hover */
+.rise {
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.rise:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, .12);
+}
+
+/* Soft badges */
+.badge-soft-primary {
+    color: #0d6efd;
+    background: rgba(13, 110, 253, .12);
+    border: 1px solid rgba(13, 110, 253, .2);
+}
+
+.badge-soft-secondary {
+    color: #6f42c1;
+    background: rgba(111, 66, 193, .12);
+    border: 1px solid rgba(111, 66, 193, .2);
+}

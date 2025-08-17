@@ -1,46 +1,64 @@
 <%- include('partials/html-start', { title: 'Projects' }) %>
     <%- include('partials/header') %>
 
-        <section class="container py-5">
-            <div class="d-flex align-items-center justify-content-between mb-4">
-                <h1 class="mb-0">Projects</h1>
-                <% if (site.cvUrl) { %>
-                    <a class="btn btn-outline-secondary" href="<%= site.cvUrl %>" target="_blank"
-                        rel="noopener">Download CV</a>
-                    <% } %>
-            </div>
+        <section class="section">
+            <div class="container">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h1 class="display-5 fw-bolder mb-0">Projects</h1>
+                    <% if (site.cvUrl) { %>
+                        <a class="btn btn-outline-secondary btn-sm" href="<%= site.cvUrl %>" target="_blank"
+                            rel="noopener">Download CV</a>
+                        <% } %>
+                </div>
+                <p class="text-muted mb-4">A few things I’m building while following Dr. Angela Yu’s course.</p>
 
-            <!-- Placeholder cards; later we’ll render from MongoDB -->
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h2 class="h5 card-title">Personal Portfolio</h2>
-                            <p class="card-text">This website: Node.js + Express + EJS + Bootstrap. Will add blog, auth,
-                                and admin soon.</p>
-                            <div class="d-flex flex-wrap gap-2">
-                                <span class="badge text-bg-light">Express</span>
-                                <span class="badge text-bg-light">EJS</span>
-                                <span class="badge text-bg-light">Bootstrap</span>
+                <div class="row g-4">
+                    <!-- Project 1 -->
+                    <div class="col-md-6">
+                        <div class="card shadow-sm rise h-100">
+                            <div class="card-body p-4 d-flex flex-column">
+                                <h2 class="h5 mb-2">Personal Portfolio</h2>
+                                <p class="mb-3 flex-grow-1">
+                                    This website: Node.js + Express + EJS + Bootstrap (Lux theme). Next steps: blog,
+                                    admin, and custom domain.
+                                </p>
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <span class="badge badge-soft-primary">Express</span>
+                                    <span class="badge badge-soft-primary">EJS</span>
+                                    <span class="badge badge-soft-primary">Bootstrap (Lux)</span>
+                                    <span class="badge badge-soft-secondary">Render</span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a class="btn btn-primary btn-sm" href="/" target="_blank" rel="noopener">Live</a>
+                                    <a class="btn btn-outline-secondary btn-sm"
+                                        href="https://github.com/youniscode/personal-website" target="_blank"
+                                        rel="noopener">Source</a>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="col-md-6">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h2 class="h5 card-title">Mini CRUD App</h2>
-                            <p class="card-text">Coming soon: a simple CRUD with MongoDB (Atlas) to practice models,
-                                routes, and forms.</p>
-                            <div class="d-flex flex-wrap gap-2">
-                                <span class="badge text-bg-light">MongoDB</span>
-                                <span class="badge text-bg-light">Mongoose</span>
-                                <span class="badge text-bg-light">Passport (planned)</span>
+                    <!-- Project 2 -->
+                    <div class="col-md-6">
+                        <div class="card shadow-sm rise h-100">
+                            <div class="card-body p-4 d-flex flex-column">
+                                <h2 class="h5 mb-2">Mini CRUD App</h2>
+                                <p class="mb-3 flex-grow-1">
+                                    Coming soon: simple CRUD with MongoDB Atlas to practice models, routes, and forms.
+                                    Admin authentication with Passport.
+                                </p>
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <span class="badge badge-soft-secondary">MongoDB</span>
+                                    <span class="badge badge-soft-secondary">Mongoose</span>
+                                    <span class="badge badge-soft-secondary">Passport (planned)</span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <span class="btn btn-outline-secondary btn-sm disabled">In progress</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </div><!-- /row -->
             </div>
         </section>
 
