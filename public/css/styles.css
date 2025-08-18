@@ -105,3 +105,13 @@ footer a {
     background: rgba(111, 66, 193, .12);
     border: 1px solid rgba(111, 66, 193, .2);
 }
+
+.blog-post .post-body p {
+    margin-bottom: 1rem;
+}
+
+.blog-post .post-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+}
