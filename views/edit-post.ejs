@@ -1,0 +1,60 @@
+<%- include('partials/html-start', { title }) %>
+    <%- include('partials/header') %>
+
+        <section class="section">
+            <div class="container" style="max-width: 820px;">
+                <h1 class="display-6 fw-bolder mb-4">Edit Post</h1>
+
+                <form method="post" action="/admin/blog/<%= post.slug %>" class="card shadow-sm p-4">
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <input name="title" type="text" class="form-control" value="<%= post.title %>" required>
+                        <div class="form-text">Slug may update if you change the title.</div>
+                    </div>
+
+                    <!-- ✅ Cover Image URL (optional) -->
+                    <div class="mb-3">
+                        <label class="form-label">Cover Image URL (optional)</label>
+                        <input name="coverImage" type="url" class="form-control" value="<%= post.coverImage || '' %>"
+                            placeholder="https://example.com/cover.jpg or /img/my-cover.jpg">
+                        <% if (post.coverImage) { %>
+                            <div class="mt-3">
+                                <img src="<%= post.coverImage %>" alt="Cover preview" class="img-fluid rounded" />
+                            </div>
+                            <% } %>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Body (Markdown)</label>
+                        <textarea id="postBody" name="body" rows="12" class="form-control"
+                            required><%= post.body %></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-center">
+                        <button class="btn btn-primary" type="submit">Save Changes</button>
+                        <a class="btn btn-outline-secondary" href="/blog/<%= post.slug %>">Cancel</a>
+
+                        <form method="post" action="/admin/blog/<%= post.slug %>/delete"
+                            onsubmit="return confirm('Delete this post permanently?');" class="ms-auto d-inline">
+                            <button class="btn btn-danger" type="submit">Delete</button>
+                        </form>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <%- include('partials/footer') %>
+
+            <link rel="stylesheet" href="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.css">
+            <script src="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.js"></script>
+            <script>
+                const mde = new SimpleMDE({
+                    element: document.getElementById('postBody'),
+                    spellChecker: false,
+                    status: false,
+                    renderingConfig: { singleLineBreaks: false },
+                    forceSync: true
+                });
+            </script>
+
+            <%- include('partials/html-end') %>

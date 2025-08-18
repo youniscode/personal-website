@@ -14,15 +14,21 @@
                             </time>
                         </div>
                     </header>
+                    <% if (post.coverImage) { %>
+                        <div class="mb-3">
+                            <img src="<%= post.coverImage %>" alt="<%= post.title %> cover" class="img-fluid rounded">
+                        </div>
+                        <% } %>
 
-                    <div class="post-body lh-lg">
-                        <!-- Sanitized HTML produced from Markdown -->
-                        <%- html %>
-                    </div>
 
-                    <footer class="mt-4 d-flex gap-2">
-                        <a class="btn btn-outline-secondary" href="/blog">← Back to Blog</a>
-                    </footer>
+                            <div class="post-body lh-lg">
+                                <!-- Sanitized HTML produced from Markdown -->
+                                <%- html %>
+                            </div>
+
+                            <footer class="mt-4 d-flex gap-2">
+                                <a class="btn btn-outline-secondary" href="/blog">← Back to Blog</a>
+                            </footer>
                 </article>
             </div>
         </section>
