@@ -41,12 +41,11 @@ app.use((req, res, next) => {
 // ---- MongoDB connection ----
 if (process.env.MONGO_URI) {
     mongoose
-        .connect(process.env.MONGO_URI)
+        .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000 })
         .then(() => console.log("✅ MongoDB connected"))
-        .catch((err) => console.error("Mongo error:", err.message));
-} else {
-    console.warn("⚠️ MONGO_URI not set; blog will be disabled.");
+        .catch((err) => console.error("❌ Mongo error:", err.message));
 }
+
 
 // ---- Routes ----
 app.get("/", (req, res) => res.render("home", { title: "Home" }));
@@ -64,47 +63,35 @@ app.post("/contact", (req, res) => {
     res.redirect("/contact?sent=1");
 });
 
-// Blog
+// Blog list (hardened)
 app.get("/blog", async (req, res) => {
-    if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
-    const posts = await Post.find().sort({ createdAt: -1 }).lean();
-    res.render("blog", { title: "Blog", posts });
-});
-
-app.get("/blog/:slug", async (req, res) => {
-    if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
-    const post = await Post.findOne({ slug: req.params.slug }).lean();
-    if (!post) return res.status(404).send("Post not found");
-    res.render("post", { title: post.title, post });
-});
-
-// One-time seed route (hit once, then remove if you like)
-app.get("/dev/seed", async (_req, res) => {
     try {
-        if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
-        const count = await Post.countDocuments();
-        if (count === 0) {
-            await Post.insertMany([
-                {
-                    title: "Hello World",
-                    slug: "hello-world",
-                    body:
-                        "My first post from the bootcamp project!\n\nThis site uses Node.js, Express, EJS, and MongoDB on Render."
-                },
-                {
-                    title: "Learning Full-Stack",
-                    slug: "learning-full-stack",
-                    body:
-                        "Building while studying is the fastest way to learn. Next up: auth with Passport and an admin panel."
-                }
-            ]);
+        if (!mongoose.connection.readyState) {
+            return res.status(503).send("DB not connected");
         }
-        res.send("Seeded (or already seeded).");
-    } catch (e) {
-        console.error(e);
-        res.status(500).send("Seed error");
+        const posts = await Post.find().sort({ createdAt: -1 }).lean();
+        return res.render("blog", { title: "Blog", posts });
+    } catch (err) {
+        console.error("💥 /blog error:", err);
+        return res.status(500).send("Blog failed: " + (err?.message || "unknown"));
     }
 });
+
+// Single post (hardened)
+app.get("/blog/:slug", async (req, res) => {
+    try {
+        if (!mongoose.connection.readyState) {
+            return res.status(503).send("DB not connected");
+        }
+        const post = await Post.findOne({ slug: req.params.slug }).lean();
+        if (!post) return res.status(404).send("Post not found");
+        return res.render("post", { title: post.title, post });
+    } catch (err) {
+        console.error("💥 /blog/:slug error:", err);
+        return res.status(500).send("Post failed: " + (err?.message || "unknown"));
+    }
+});
+
 
 // Health check (optional)
 app.get("/health", (_req, res) => res.send("ok"));
