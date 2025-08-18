@@ -409,3 +409,46 @@ app.use((_req, res) => res.status(404).send("Not Found"));
 app.listen(PORT, () => {
     console.log(`🚀 http://localhost:${PORT}`);
 });
+
+// Edit form
+app.get("/admin/blog/:slug/edit", adminOnly, async (req, res) => {
+    const post = await Post.findOne({ slug: req.params.slug }).lean();
+    if (!post) return res.status(404).send("Post not found");
+    res.render("edit-post", { title: `Edit: ${post.title}`, post });
+});
+
+// Update
+app.post("/admin/blog/:slug", adminOnly, async (req, res) => {
+    const { title, body, coverImage } = req.body;
+    if (!title || !body) return res.status(400).send("Title and body are required.");
+    const current = await Post.findOne({ slug: req.params.slug });
+    if (!current) return res.status(404).send("Post not found");
+
+    const newSlug = slugify(title, { lower: true, strict: true });
+    if (newSlug !== current.slug) {
+        const conflict = await Post.findOne({ slug: newSlug }).lean();
+        if (conflict) return res.status(409).send("Another post already uses that title.");
+    }
+
+    current.title = title;
+    current.slug = newSlug;
+    current.body = body;
+    current.bodyHtml = mdToHtml(body);
+    current.coverImage = coverImage || null;
+    await current.save();
+    res.redirect(`/blog/${current.slug}`);
+});
+
+// Delete
+app.post("/admin/blog/:slug/delete", adminOnly, async (req, res) => {
+    await Post.deleteOne({ slug: req.params.slug });
+    res.redirect("/blog");
+});
+
+
+// expose a hint when a valid Basic Auth header is present (very light-weight)
+app.use((req, res, next) => {
+    const auth = req.get('authorization') || '';
+    res.locals.isAdmin = auth.startsWith('Basic ');
+    next();
+});

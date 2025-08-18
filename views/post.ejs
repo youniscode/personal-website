@@ -26,9 +26,18 @@
                                 <%- html %>
                             </div>
 
-                            <footer class="mt-4 d-flex gap-2">
-                                <a class="btn btn-outline-secondary" href="/blog">← Back to Blog</a>
+                            <footer class="mt-4">
+                                <div class="post-actions d-flex gap-2 flex-wrap">
+                                    <a class="btn btn-outline-secondary" href="/blog">← Back to Blog</a>
+                                    <a class="btn btn-edit" href="/admin/blog/<%= post.slug %>/edit">Edit</a>
+                                    <form method="post" action="/admin/blog/<%= post.slug %>/delete"
+                                        onsubmit="return confirm('Delete this post?');" class="d-inline">
+                                        <button class="btn btn-danger" type="submit">Delete</button>
+                                    </form>
+                                </div>
                             </footer>
+
+
                 </article>
             </div>
         </section>

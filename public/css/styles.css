@@ -1,18 +1,26 @@
-/* ===== Global ===== */
+/* ===========================
+   Global
+   =========================== */
 :root {
     --accent: #0d6efd;
-    /* Bootstrap primary (Lux) */
+    /* Lux/Bootstrap primary */
     --accent-2: #6610f2;
-    /* Purple */
+    /* Purple gradient stop */
     --gold: #ffc107;
+    /* Hover accent */
 }
 
 body {
     line-height: 1.6;
 }
 
-/* ===== Navbar ===== */
+/* ===========================
+   Navbar
+   =========================== */
 .navbar-brand {
+    padding-top: .25rem;
+    /* compact bar */
+    padding-bottom: .25rem;
     font-size: 1.25rem;
     font-weight: 800;
     letter-spacing: .5px;
@@ -29,7 +37,38 @@ body {
     /* gold hover */
 }
 
-/* ===== Hero ===== */
+/* --- Brand logo (SVG or IMG) --- */
+.brand-logo {
+    display: flex;
+    align-items: center;
+}
+
+/* If you use inline SVG (current header) */
+.brand-logo svg {
+    height: 40px;
+    /* tweak 36–48px to taste */
+    width: auto;
+    display: block;
+    transform: scale(1.25);
+    /* visually larger without taller navbar */
+    transform-origin: left center;
+}
+
+/* If you swap to an <img>, this keeps parity */
+.brand-logo img {
+    height: 40px;
+    width: auto;
+    display: block;
+}
+
+/* gentle hover pop without jumpiness */
+.brand-logo:hover svg rect:first-child {
+    filter: brightness(1.08);
+}
+
+/* ===========================
+   Hero
+   =========================== */
 .hero {
     min-height: 65vh;
     padding: 7rem 0 4rem;
@@ -61,29 +100,20 @@ body {
     border-color: #fff;
 }
 
-/* ===== Footer ===== */
-footer {
-    background: #212529;
-    color: #adb5bd;
+/* ===========================
+   Sections & Utilities
+   =========================== */
+.section {
+    padding: 4rem 0 3rem;
 }
 
-footer a {
-    color: #fff;
-}
-
-/* ===== Utility ===== */
 .btn-outline-secondary:hover {
     border-color: var(--accent);
     color: #fff;
     background: var(--accent);
 }
 
-/* Sections */
-.section {
-    padding: 4rem 0 3rem;
-}
-
-/* Card hover */
+/* Lift-on-hover utility for cards */
 .rise {
     transition: transform .15s ease, box-shadow .15s ease;
 }
@@ -106,6 +136,9 @@ footer a {
     border: 1px solid rgba(111, 66, 193, .2);
 }
 
+/* ===========================
+   Blog post content
+   =========================== */
 .blog-post .post-body p {
     margin-bottom: 1rem;
 }
@@ -116,12 +149,52 @@ footer a {
     border-radius: 6px;
 }
 
-.blog-post .post-body p {
-    margin-bottom: 1rem;
+/* Post actions bar */
+.post-actions {
+    background: #1f2429;
+    border-radius: .25rem;
+    padding: .75rem;
 }
 
-.blog-post .post-body img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 6px;
+.post-actions .btn {
+    border-width: 2px;
+    font-weight: 600;
+}
+
+.post-actions .btn-outline-secondary {
+    color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.post-actions .btn-outline-secondary:hover {
+    background: #adb5bd;
+    color: #1f2429;
+}
+
+.post-actions .btn-edit {
+    background: #f0ad4e;
+    /* warning */
+    color: #1f2429;
+    border-color: #f0ad4e;
+}
+
+.post-actions .btn-edit:hover {
+    background: #ec971f;
+    border-color: #ec971f;
+}
+
+.post-actions .btn-danger {
+    border-color: #dc3545;
+}
+
+/* ===========================
+   Footer
+   =========================== */
+footer {
+    background: #212529;
+    color: #adb5bd;
+}
+
+footer a {
+    color: #fff;
 }

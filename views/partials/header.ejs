@@ -1,33 +1,54 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-
-
-
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/">
-            <%= site.name %>
+        <a class="navbar-brand d-flex align-items-center brand-logo" href="/" aria-label="Home">
+            <!-- Scalable YH logo (no raster image) -->
+            <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+                <!-- Badge -->
+                <rect x="2" y="2" width="44" height="44" rx="10" fill="url(#grad)" />
+                <!-- YH letters -->
+                <g fill="none" stroke="white" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- Y -->
+                    <path d="M13 12 L19 20 L19 36" />
+                    <path d="M25 12 L19 20" />
+                    <!-- H -->
+                    <path d="M29 12 L29 36" />
+                    <path d="M29 24 L39 24" />
+                    <path d="M39 12 L39 36" />
+                </g>
+
+                <!-- Subtle inner border for depth -->
+                <rect x="2" y="2" width="44" height="44" rx="10" fill="none" stroke="rgba(255,255,255,.25)"
+                    stroke-width="1.2" />
+
+                <!-- Gradient -->
+                <defs>
+                    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <!-- tweak these to match your hero gradient -->
+                        <stop offset="0%" stop-color="#2f6bff" />
+                        <stop offset="100%" stop-color="#7a2dff" />
+                    </linearGradient>
+                </defs>
+            </svg>
         </a>
+
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
             <span class="navbar-toggler-icon"></span>
         </button>
+
         <div id="nav" class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link <%= path === '/projects' ? 'active' : '' %>" href="/projects">Projects</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <%= path === '/about' ? 'active' : '' %>" href="/about">About</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <%= path === '/contact' ? 'active' : '' %>" href="/contact">Contact</a>
-                </li>
+                <li class="nav-item"><a class="nav-link <%= path === '/projects' ? 'active' : '' %>"
+                        href="/projects">Projects</a></li>
+                <li class="nav-item"><a class="nav-link <%= path === '/about' ? 'active' : '' %>"
+                        href="/about">About</a></li>
+                <li class="nav-item"><a class="nav-link <%= path === '/contact' ? 'active' : '' %>"
+                        href="/contact">Contact</a></li>
                 <% if (site.cvUrl) { %>
                     <li class="nav-item"><a class="nav-link" href="<%= site.cvUrl %>" target="_blank"
                             rel="noopener">Download CV</a></li>
                     <% } %>
-                        <li class="nav-item">
-                            <a class="nav-link <%= path.startsWith('/blog') ? 'active' : '' %>" href="/blog">Blog</a>
-                        </li>
-
+                        <li class="nav-item"><a class="nav-link <%= path.startsWith('/blog') ? 'active' : '' %>"
+                                href="/blog">Blog</a></li>
             </ul>
         </div>
     </div>
