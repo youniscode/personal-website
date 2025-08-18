@@ -1,0 +1,36 @@
+<%- include('partials/html-start', { title: 'Blog' }) %>
+    <%- include('partials/header') %>
+
+        <section class="section">
+            <div class="container">
+                <h1 class="display-5 fw-bolder mb-3">Blog</h1>
+                <p class="text-muted mb-4">Notes from my learning-in-public journey.</p>
+
+                <% if (!posts || posts.length===0) { %>
+                    <div class="alert alert-info">No posts yet. Visit <code>/dev/seed</code> once to add sample posts.
+                    </div>
+                    <% } else { %>
+                        <div class="list-group">
+                            <% posts.forEach(p=> { %>
+                                <a class="list-group-item list-group-item-action" href="/blog/<%= p.slug %>">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h2 class="h5 mb-1">
+                                            <%= p.title %>
+                                        </h2>
+                                        <small>
+                                            <%= new Date(p.createdAt).toLocaleDateString() %>
+                                        </small>
+                                    </div>
+                                    <p class="mb-1 text-muted">
+                                        <%= (p.body || "" ).slice(0,140) %>
+                                            <%= (p.body||"").length>140?"…":"" %>
+                                    </p>
+                                </a>
+                                <% }) %>
+                        </div>
+                        <% } %>
+            </div>
+        </section>
+
+        <%- include('partials/footer') %>
+            <%- include('partials/html-end') %>
