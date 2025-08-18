@@ -16,12 +16,8 @@
                     </header>
 
                     <div class="post-body lh-lg">
-                        <!-- Admin-authored content: render with basic line breaks -->
-                        <%- (post.body || "" ).replace(/\r?\n\r?\n/g, '</p><p>' ) .replace(/\r?\n/g, '<br>' ) ?
-                            `<p>${(post.body || "")
-                            .replace(/\r?\n\r?\n/g, '</p>
-                            <p>')
-                                .replace(/\r?\n/g, '<br>')}</p>` : '' %>
+                        <!-- Sanitized HTML produced from Markdown -->
+                        <%- html %>
                     </div>
 
                     <footer class="mt-4 d-flex gap-2">

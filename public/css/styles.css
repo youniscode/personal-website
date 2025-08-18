@@ -115,3 +115,13 @@ footer a {
     height: auto;
     border-radius: 6px;
 }
+
+.blog-post .post-body p {
+    margin-bottom: 1rem;
+}
+
+.blog-post .post-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+}
