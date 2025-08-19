@@ -6,27 +6,33 @@
                 <h1 class="display-6 fw-bolder mb-4">Edit Post</h1>
 
                 <form method="post" action="/admin/blog/<%= post.slug %>" class="card shadow-sm p-4">
+
+                    <!-- Title -->
                     <div class="mb-3">
                         <label class="form-label">Title</label>
                         <input name="title" type="text" class="form-control" value="<%= post.title %>" required>
                         <div class="form-text">Slug will update based on the new title.</div>
                     </div>
 
+                    <!-- Cover image (relative path or full URL) -->
                     <div class="mb-3">
                         <label class="form-label">Cover Image URL (optional)</label>
-                        <input name="coverImage" type="url" class="form-control"
-                            placeholder="https://example.com/cover.jpg" value="<%= post.coverImage || '' %>">
-                        <div class="form-text">Shown as the large banner and as the list thumbnail.</div>
+                        <input name="coverImage" type="text" class="form-control" value="<%= post.coverImage || '' %>"
+                            placeholder="/img/blog/hello-world.jpg or https://example.com/cover.jpg">
+                        <div class="form-text">
+                            Shown as the large banner and as the list thumbnail.
+                        </div>
                     </div>
 
+                    <!-- Body (Markdown) -->
                     <div class="mb-3">
                         <label class="form-label">Body (Markdown)</label>
-                        <textarea id="postBody" name="body" rows="12" class="form-control"
-                            required><%- post.body || '' %></textarea>
+                        <textarea id="postBody" name="body" rows="14" class="form-control"
+                            required><%= post.body || '' %></textarea>
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button class="btn btn-primary" type="submit">Save changes</button>
+                        <button class="btn btn-primary" type="submit">Save Changes</button>
                         <a class="btn btn-outline-secondary" href="/blog/<%= post.slug %>">Cancel</a>
                     </div>
                 </form>
@@ -39,13 +45,12 @@
             <link rel="stylesheet" href="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.css">
             <script src="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.js"></script>
             <script>
-                // Attach editor and ensure the underlying <textarea> is synced on submit
                 const mde = new SimpleMDE({
                     element: document.getElementById('postBody'),
                     spellChecker: false,
                     status: false,
                     renderingConfig: { singleLineBreaks: false },
-                    forceSync: true // critical so req.body.body contains the content
+                    forceSync: true
                 });
             </script>
 
