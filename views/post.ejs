@@ -1,44 +1,43 @@
 <%- include('partials/html-start', { title }) %>
     <%- include('partials/header') %>
 
-        <section class="section">
-            <div class="container" style="max-width: 820px;">
-                <article class="blog-post card shadow-sm p-4">
-                    <header class="mb-3">
-                        <h1 class="display-6 fw-bolder mb-2">
-                            <%= post.title %>
-                        </h1>
-                        <div class="text-muted small">
-                            <time datetime="<%= new Date(post.createdAt).toISOString() %>">
-                                <%= new Date(post.createdAt).toLocaleDateString() %>
-                            </time>
-                        </div>
-                    </header>
-                    <% if (post.coverImage) { %>
-                        <div class="mb-3">
-                            <img src="<%= post.coverImage %>" alt="<%= post.title %> cover" class="img-fluid rounded">
-                        </div>
-                        <% } %>
+        <!-- Cover / Hero -->
+        <section class="post-hero">
+            <div class="post-cover">
+                <img src="<%= (post.coverImage && post.coverImage.trim() !== '') ? post.coverImage : '/img/share-default.jpg' %>"
+                    alt="<%= post.title %>">
+            </div>
+        </section>
 
+        <!-- Article -->
+        <section class="section blog-post">
+            <div class="container" style="max-width: 860px;">
+                <header class="mb-3">
+                    <h1 class="display-6 fw-bolder mb-1">
+                        <%= post.title %>
+                    </h1>
+                    <div class="text-muted">
+                        <%= new Date(post.createdAt).toLocaleDateString() %>
+                    </div>
+                </header>
 
-                            <div class="post-body lh-lg">
-                                <!-- Sanitized HTML produced from Markdown -->
-                                <%- html %>
-                            </div>
-
-                            <footer class="mt-4">
-                                <div class="post-actions d-flex gap-2 flex-wrap">
-                                    <a class="btn btn-outline-secondary" href="/blog">← Back to Blog</a>
-                                    <a class="btn btn-edit" href="/admin/blog/<%= post.slug %>/edit">Edit</a>
-                                    <form method="post" action="/admin/blog/<%= post.slug %>/delete"
-                                        onsubmit="return confirm('Delete this post?');" class="d-inline">
-                                        <button class="btn btn-danger" type="submit">Delete</button>
-                                    </form>
-                                </div>
-                            </footer>
-
-
+                <article class="post-body lh-lg">
+                    <!-- Sanitized HTML produced from Markdown -->
+                    <%- html %>
                 </article>
+
+                <!-- Actions -->
+                <footer class="mt-4 post-actions d-flex gap-2 flex-wrap">
+                    <a class="btn btn-outline-secondary" href="/blog">← Back to blog</a>
+
+                    <% if (typeof isAdmin !=='undefined' && isAdmin) { %>
+                        <a class="btn btn-edit" href="/admin/blog/<%= post.slug %>/edit">Edit</a>
+                        <form method="post" action="/admin/blog/<%= post.slug %>/delete"
+                            onsubmit="return confirm('Delete “<%= post.title %>”?');" class="d-inline">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                        <% } %>
+                </footer>
             </div>
         </section>
 
