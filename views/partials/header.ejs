@@ -1,8 +1,8 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+<nav class="navbar navbar-expand-lg site-navbar shadow-sm">
     <div class="container">
+        <!-- Brand / Logo -->
         <a class="navbar-brand d-flex align-items-center brand-logo" href="/" aria-label="Home">
-            <!-- Scalable YH logo (no raster image) -->
-            <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="36" height="36" aria-hidden="true">
                 <!-- Badge -->
                 <rect x="2" y="2" width="44" height="44" rx="10" fill="url(#grad)" />
                 <!-- YH letters -->
@@ -15,15 +15,12 @@
                     <path d="M29 24 L39 24" />
                     <path d="M39 12 L39 36" />
                 </g>
-
-                <!-- Subtle inner border for depth -->
+                <!-- Subtle inner border -->
                 <rect x="2" y="2" width="44" height="44" rx="10" fill="none" stroke="rgba(255,255,255,.25)"
                     stroke-width="1.2" />
-
-                <!-- Gradient -->
+                <!-- Gradient fill -->
                 <defs>
                     <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <!-- tweak these to match your hero gradient -->
                         <stop offset="0%" stop-color="#2f6bff" />
                         <stop offset="100%" stop-color="#7a2dff" />
                     </linearGradient>
@@ -31,24 +28,35 @@
             </svg>
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <!-- Mobile toggler -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div id="nav" class="collapse navbar-collapse">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link <%= path === '/projects' ? 'active' : '' %>"
-                        href="/projects">Projects</a></li>
-                <li class="nav-item"><a class="nav-link <%= path === '/about' ? 'active' : '' %>"
-                        href="/about">About</a></li>
-                <li class="nav-item"><a class="nav-link <%= path === '/contact' ? 'active' : '' %>"
-                        href="/contact">Contact</a></li>
-                <% if (site.cvUrl) { %>
-                    <li class="nav-item"><a class="nav-link" href="<%= site.cvUrl %>" target="_blank"
-                            rel="noopener">Download CV</a></li>
+        <!-- Links -->
+        <div id="siteNav" class="collapse navbar-collapse">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
+                <li class="nav-item">
+                    <a class="nav-link <%= path === '/projects' ? 'active' : '' %>" href="/projects">Projects</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= path === '/about' ? 'active' : '' %>" href="/about">About</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= path === '/contact' ? 'active' : '' %>" href="/contact">Contact</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= path.startsWith('/blog') ? 'active' : '' %>" href="/blog">Blog</a>
+                </li>
+
+                <% if (typeof isAdmin !=='undefined' && isAdmin) { %>
+                    <li class="nav-item ms-lg-2">
+                        <a href="/admin/blog/new" class="btn btn-sm btn-gold">New Post</a>
+                    </li>
+                    <li class="nav-item ms-lg-2">
+                        <a href="/logout" class="btn btn-sm btn-outline-light">Log Out</a>
+                    </li>
                     <% } %>
-                        <li class="nav-item"><a class="nav-link <%= path.startsWith('/blog') ? 'active' : '' %>"
-                                href="/blog">Blog</a></li>
             </ul>
         </div>
     </div>
