@@ -70,7 +70,9 @@ function mdToHtml(md = "") {
     });
 }
 function absUrl(req, pathStr = "/") {
-    const base = process.env.BASE_URL?.replace(/\/+$/, "") || `${req.protocol}://${req.get("host")}`;
+    const base =
+        process.env.BASE_URL?.replace(/\/+$/, "") ||
+        `${req.protocol}://${req.get("host")}`;
     return `${base}${pathStr.startsWith("/") ? pathStr : `/${pathStr}`}`;
 }
 function summarize(htmlOrMd = "", n = 160) {
@@ -91,7 +93,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Prevent index rebuilds in production if you want
+// Mongoose index behavior for production
 if (process.env.NODE_ENV === "production") {
     mongoose.set("autoIndex", false);
 }
@@ -154,12 +156,14 @@ passport.deserializeUser(async (id, done) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-// --- Flash (very small, no package) ---
+// Make a safe flash object available to all views.
+// If you later set `req.session.flash = { type, text }`, it'll show once and then clear.
 app.use((req, res, next) => {
-    res.locals.flash = req.session.flash || null;
-    delete req.session.flash;
+    res.locals.flash = req.session?.flash || null;
+    if (req.session) delete req.session.flash;
     next();
 });
+
 
 // Expose admin flag to views
 app.use((req, res, next) => {
@@ -192,7 +196,7 @@ app.post("/contact", (req, res) => {
 app.get("/login", (req, res) => {
     res.render("login", {
         title: "Login",
-        error: req.query.err ? "Invalid email or password." : null
+        error: req.query.err ? "Invalid email or password." : null,
     });
 });
 app.post(
@@ -211,17 +215,39 @@ app.post("/logout", (req, res, next) => {
     });
 });
 
-// Handy /admin shortcut
-app.get("/admin", (req, res) => {
-    if (req.isAuthenticated && req.isAuthenticated()) return res.redirect("/blog");
-    return res.redirect("/login?next=/blog");
+// ───── Change password (admin) ─────
+app.get("/admin/password", ensureAuth, (req, res) => {
+    res.render("admin-password", { title: "Change Password", error: null, ok: null });
 });
+app.post("/admin/password", ensureAuth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user._id);
+        if (!user) return res.render("admin-password", { title: "Change Password", error: "User not found", ok: null });
+
+        const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!ok) return res.render("admin-password", { title: "Change Password", error: "Current password is incorrect", ok: null });
+
+        user.passwordHash = await bcrypt.hash(newPassword, 12);
+        await user.save();
+        res.render("admin-password", { title: "Change Password", error: null, ok: "Password updated!" });
+    } catch (e) {
+        console.error("password change error:", e);
+        res.render("admin-password", { title: "Change Password", error: "Something went wrong", ok: null });
+    }
+});
+
+// Common published filter: treat missing draft as published
+const pubFilter = { $or: [{ draft: false }, { draft: { $exists: false } }] };
 
 // ───── Blog (public) ─────
 app.get("/blog", async (req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
-        const posts = await Post.find().sort({ createdAt: -1 }).lean();
+
+        // Logged-out users: only published (draft:false OR draft missing)
+        const query = req.user ? {} : pubFilter;
+        const posts = await Post.find(query).sort({ createdAt: -1 }).lean();
 
         res.locals.meta = {
             ...res.locals.meta,
@@ -244,6 +270,10 @@ app.get("/blog/:slug", async (req, res) => {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
         const post = await Post.findOne({ slug: req.params.slug }).lean();
         if (!post) return res.status(404).send("Post not found");
+
+        // If it is a draft (true), only admins can view
+        const isDraft = !!post.draft;
+        if (isDraft && !req.user) return res.status(404).send("Post not found");
 
         const html = post.bodyHtml || mdToHtml(post.body || "");
         const desc = summarize(html, 180);
@@ -276,18 +306,14 @@ app.post("/admin/blog", ensureAuth, async (req, res) => {
         if (!title || !body) return res.status(400).send("Title and body are required.");
         const slug = slugify(title, { lower: true, strict: true });
         const existing = await Post.findOne({ slug }).lean();
-        if (existing) {
-            req.session.flash = { type: "warning", text: "A post with that title already exists." };
-            return res.redirect("/blog");
-        }
+        if (existing) return res.status(409).send("A post with this title already exists.");
         const html = mdToHtml(body);
-        await Post.create({ title, slug, body, bodyHtml: html, coverImage: coverImage || null });
-        req.session.flash = { type: "success", text: "Post published." };
+        const draft = req.body.draft === "on";
+        await Post.create({ title, slug, body, bodyHtml: html, coverImage: coverImage || null, draft });
         res.redirect(`/blog/${slug}`);
     } catch (err) {
         console.error("💥 create post error:", err);
-        req.session.flash = { type: "danger", text: "Failed to create post." };
-        res.redirect("/blog");
+        res.status(500).send("Failed to create post.");
     }
 });
 
@@ -298,8 +324,7 @@ app.get("/admin/blog/:slug/edit", ensureAuth, async (req, res) => {
         res.render("edit-post", { title: `Edit: ${post.title}`, post });
     } catch (err) {
         console.error("💥 GET edit error:", err);
-        req.session.flash = { type: "danger", text: "Failed to load edit page." };
-        res.redirect("/blog");
+        res.status(500).send("Failed to load edit page.");
     }
 });
 
@@ -309,18 +334,12 @@ app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
         if (!title || !body) return res.status(400).send("Title and body are required.");
 
         const current = await Post.findOne({ slug: req.params.slug });
-        if (!current) {
-            req.session.flash = { type: "warning", text: "Post not found." };
-            return res.redirect("/blog");
-        }
+        if (!current) return res.status(404).send("Post not found");
 
         const newSlug = slugify(title, { lower: true, strict: true });
         if (newSlug !== current.slug) {
             const conflict = await Post.findOne({ slug: newSlug }).lean();
-            if (conflict) {
-                req.session.flash = { type: "warning", text: "Another post already uses that title." };
-                return res.redirect(`/admin/blog/${current.slug}/edit`);
-            }
+            if (conflict) return res.status(409).send("Another post already uses that title.");
         }
 
         current.title = title;
@@ -328,26 +347,23 @@ app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
         current.body = body;
         current.bodyHtml = mdToHtml(body);
         current.coverImage = coverImage || null;
-        await current.save();
+        current.draft = req.body.draft === "on";
 
-        req.session.flash = { type: "success", text: "Post updated." };
+        await current.save();
         res.redirect(`/blog/${current.slug}`);
     } catch (err) {
         console.error("💥 POST update error:", err);
-        req.session.flash = { type: "danger", text: "Failed to update post." };
-        res.redirect("/blog");
+        res.status(500).send("Failed to update post.");
     }
 });
 
 app.post("/admin/blog/:slug/delete", ensureAuth, async (req, res) => {
     try {
         await Post.deleteOne({ slug: req.params.slug });
-        req.session.flash = { type: "success", text: "Post deleted." };
         res.redirect("/blog");
     } catch (err) {
         console.error("💥 delete error:", err);
-        req.session.flash = { type: "danger", text: "Failed to delete post." };
-        res.redirect("/blog");
+        res.status(500).send("Failed to delete post.");
     }
 });
 
@@ -357,10 +373,14 @@ app.get("/sitemap.xml", async (req, res) => {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
         const staticUrls = ["/", "/projects", "/about", "/contact", "/blog"]
             .map(u => `  <url><loc>${base}${u}</loc><changefreq>weekly</changefreq></url>`).join("\n");
-        const posts = await Post.find().sort({ createdAt: -1 }).lean();
+
+        // Only published posts (draft:false OR no draft field)
+        const posts = await Post.find(pubFilter).sort({ createdAt: -1 }).lean();
+
         const postUrls = posts
             .map(p => `  <url><loc>${base}/blog/${p.slug}</loc><changefreq>weekly</changefreq></url>`)
             .join("\n");
+
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${staticUrls}
@@ -376,7 +396,10 @@ ${postUrls}
 app.get("/rss.xml", async (req, res) => {
     try {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
-        const posts = await Post.find().sort({ createdAt: -1 }).lean();
+
+        // Only published posts (draft:false OR no draft field)
+        const posts = await Post.find(pubFilter).sort({ createdAt: -1 }).lean();
+
         const items = posts.map(p => {
             const html = p.bodyHtml || mdToHtml(p.body || "");
             const desc = summarize(html, 200);
@@ -389,6 +412,7 @@ app.get("/rss.xml", async (req, res) => {
     <description><![CDATA[${desc}]]></description>
   </item>`;
         }).join("\n");
+
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
 <channel>
@@ -418,8 +442,8 @@ app.get("/dev/seed", async (_req, res) => {
         const count = await Post.countDocuments();
         if (count === 0) {
             await Post.insertMany([
-                { title: "Hello World", slug: "hello-world", body: "My first post from the bootcamp project! This site uses Node.js, Express, EJS, and MongoDB." },
-                { title: "Learning Full-Stack", slug: "learning-full-stack", body: "Building while studying is the fastest way to learn. Next up: auth with Passport and an admin panel." }
+                { title: "Hello World", slug: "hello-world", body: "My first post from the bootcamp project! This site uses Node.js, Express, EJS, and MongoDB.", draft: false },
+                { title: "Learning Full-Stack", slug: "learning-full-stack", body: "Building while studying is the fastest way to learn. Next up: auth with Passport and an admin panel.", draft: false }
             ]);
         }
         res.send("Seeded (or already seeded).");

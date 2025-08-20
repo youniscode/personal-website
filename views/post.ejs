@@ -10,9 +10,15 @@
                     </div>
                     <% } %>
 
-                        <h1 class="display-6 fw-bolder">
-                            <%= post.title %>
-                        </h1>
+                        <div class="d-flex align-items-center gap-2">
+                            <h1 class="display-6 fw-bolder mb-0">
+                                <%= post.title %>
+                            </h1>
+                            <% if (post.draft) { %>
+                                <span class="badge bg-warning text-dark">Draft</span>
+                                <% } %>
+                        </div>
+
                         <div class="text-muted mb-4">
                             <%= new Date(post.createdAt).toLocaleDateString() %>
                         </div>
@@ -23,11 +29,24 @@
                             <a class="btn btn-outline-secondary btn-sm" href="/blog">← Back to blog</a>
                             <% if (isAdmin) { %>
                                 <a class="btn btn-edit btn-sm" href="/admin/blog/<%= post.slug %>/edit">Edit</a>
-                                <form method="post" action="/admin/blog/<%= post.slug %>/delete" class="d-inline"
-                                    data-confirm='Delete “<%= post.title %>”?'>
-                                    <button class="btn btn-danger btn-sm" type="submit">Delete</button>
-                                </form>
-                                <% } %>
+
+                                <% if (post.draft) { %>
+                                    <form method="post" action="/admin/blog/<%= post.slug %>/publish" class="d-inline">
+                                        <button class="btn btn-success btn-sm" type="submit">Publish</button>
+                                    </form>
+                                    <% } else { %>
+                                        <form method="post" action="/admin/blog/<%= post.slug %>/unpublish"
+                                            class="d-inline">
+                                            <button class="btn btn-outline-warning btn-sm"
+                                                type="submit">Unpublish</button>
+                                        </form>
+                                        <% } %>
+
+                                            <form method="post" action="/admin/blog/<%= post.slug %>/delete"
+                                                class="d-inline" data-confirm='Delete “<%= post.title %>”?'>
+                                                <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                                            </form>
+                                            <% } %>
                         </div>
             </div>
         </section>
