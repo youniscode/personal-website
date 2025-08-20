@@ -5,13 +5,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import Post from "./models/post.js";
 import slugify from "slugify";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
-
-// Models
-import Post from "./models/post.js";
-import User from "./models/user.js";
 
 // Auth deps
 import session from "express-session";
@@ -19,28 +16,23 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import bcrypt from "bcrypt";
 import MongoStore from "connect-mongo";
+import User from "./models/user.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Make secure cookies work behind Render's proxy
-if (process.env.NODE_ENV === "production") {
-    app.set("trust proxy", 1);
-}
-
-// Proper __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ---------- Views / static / body parsing ----------
+// Views/static/body
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 
-// ---------- Site-wide locals ----------
+// Site locals
 app.locals.site = {
     name: process.env.NAME || "YourName",
     role: process.env.ROLE || "",
@@ -51,13 +43,13 @@ app.locals.site = {
     cvUrl: process.env.CV_URL || ""
 };
 
-// Mark active nav path
+// Active nav
 app.use((req, res, next) => {
     res.locals.path = req.path;
     next();
 });
 
-// ---------- Helpers ----------
+// Markdown → safe HTML
 function mdToHtml(md = "") {
     const raw = marked(md, { mangle: false, headerIds: true });
     return sanitizeHtml(raw, {
@@ -77,18 +69,16 @@ function mdToHtml(md = "") {
         }
     });
 }
-
 function absUrl(req, pathStr = "/") {
     const base = process.env.BASE_URL?.replace(/\/+$/, "") || `${req.protocol}://${req.get("host")}`;
     return `${base}${pathStr.startsWith("/") ? pathStr : `/${pathStr}`}`;
 }
-
 function summarize(htmlOrMd = "", n = 160) {
     const text = String(htmlOrMd).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
     return text.length > n ? text.slice(0, n - 1) + "…" : text;
 }
 
-// Default meta for all pages
+// Default meta
 app.use((req, res, next) => {
     res.locals.meta = {
         title: res.locals.title || app.locals.site.name,
@@ -96,17 +86,17 @@ app.use((req, res, next) => {
         type: "website",
         url: absUrl(req, req.path),
         canonical: absUrl(req, req.path),
-        image: null // html-start.ejs can fall back to /img/share-default.jpg
+        image: null
     };
     next();
 });
 
-// ---------- MongoDB ----------
-// Avoid auto-building indexes on Render each boot (faster/cheaper)
+// Prevent index rebuilds in production if you want
 if (process.env.NODE_ENV === "production") {
     mongoose.set("autoIndex", false);
 }
 
+// MongoDB
 if (process.env.MONGO_URI) {
     mongoose
         .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000 })
@@ -116,16 +106,15 @@ if (process.env.MONGO_URI) {
     console.warn("⚠️ MONGO_URI not set; blog will be disabled.");
 }
 
-// ---------- Sessions + Passport ----------
+// ───── Sessions + Passport (local strategy) ─────
 const sessionSecret = process.env.SESSION_SECRET || "change-me-please";
-
 app.use(
     session({
         secret: sessionSecret,
         resave: false,
         saveUninitialized: false,
         cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 7,           // 7 days
+            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax"
         },
@@ -161,8 +150,16 @@ passport.deserializeUser(async (id, done) => {
         done(e);
     }
 });
+
 app.use(passport.initialize());
 app.use(passport.session());
+
+// --- Flash (very small, no package) ---
+app.use((req, res, next) => {
+    res.locals.flash = req.session.flash || null;
+    delete req.session.flash;
+    next();
+});
 
 // Expose admin flag to views
 app.use((req, res, next) => {
@@ -170,18 +167,17 @@ app.use((req, res, next) => {
     next();
 });
 
-// Guard for admin-only routes
+// Protect admin routes
 function ensureAuth(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) return next();
     res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
 }
 
-// ---------- Core pages ----------
+// ───── Core pages ─────
 app.get("/", (req, res) => res.render("home", { title: "Home" }));
 app.get("/about", (req, res) => res.render("about", { title: "About" }));
 app.get("/projects", (req, res) => res.render("projects", { title: "Projects" }));
 
-// Contact (demo)
 app.get("/contact", (req, res) =>
     res.render("contact", { title: "Contact", sent: req.query.sent === "1" })
 );
@@ -192,14 +188,13 @@ app.post("/contact", (req, res) => {
     res.redirect("/contact?sent=1");
 });
 
-// ---------- Login / Logout ----------
+// ───── Login / Logout ─────
 app.get("/login", (req, res) => {
     res.render("login", {
         title: "Login",
         error: req.query.err ? "Invalid email or password." : null
     });
 });
-
 app.post(
     "/login",
     (req, res, next) => {
@@ -209,7 +204,6 @@ app.post(
     passport.authenticate("local", { failureRedirect: "/login?err=1" }),
     (req, res) => res.redirect(req._nextUrl || "/blog")
 );
-
 app.post("/logout", (req, res, next) => {
     req.logout(err => {
         if (err) return next(err);
@@ -217,7 +211,13 @@ app.post("/logout", (req, res, next) => {
     });
 });
 
-// ---------- Blog (public) ----------
+// Handy /admin shortcut
+app.get("/admin", (req, res) => {
+    if (req.isAuthenticated && req.isAuthenticated()) return res.redirect("/blog");
+    return res.redirect("/login?next=/blog");
+});
+
+// ───── Blog (public) ─────
 app.get("/blog", async (req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
@@ -265,7 +265,7 @@ app.get("/blog/:slug", async (req, res) => {
     }
 });
 
-// ---------- Blog admin (protected) ----------
+// ───── Blog admin (protected) ─────
 app.get("/admin/blog/new", ensureAuth, (_req, res) => {
     res.render("new-post", { title: "New Post" });
 });
@@ -276,13 +276,18 @@ app.post("/admin/blog", ensureAuth, async (req, res) => {
         if (!title || !body) return res.status(400).send("Title and body are required.");
         const slug = slugify(title, { lower: true, strict: true });
         const existing = await Post.findOne({ slug }).lean();
-        if (existing) return res.status(409).send("A post with this title already exists.");
+        if (existing) {
+            req.session.flash = { type: "warning", text: "A post with that title already exists." };
+            return res.redirect("/blog");
+        }
         const html = mdToHtml(body);
         await Post.create({ title, slug, body, bodyHtml: html, coverImage: coverImage || null });
+        req.session.flash = { type: "success", text: "Post published." };
         res.redirect(`/blog/${slug}`);
     } catch (err) {
         console.error("💥 create post error:", err);
-        res.status(500).send("Failed to create post.");
+        req.session.flash = { type: "danger", text: "Failed to create post." };
+        res.redirect("/blog");
     }
 });
 
@@ -293,7 +298,8 @@ app.get("/admin/blog/:slug/edit", ensureAuth, async (req, res) => {
         res.render("edit-post", { title: `Edit: ${post.title}`, post });
     } catch (err) {
         console.error("💥 GET edit error:", err);
-        res.status(500).send("Failed to load edit page.");
+        req.session.flash = { type: "danger", text: "Failed to load edit page." };
+        res.redirect("/blog");
     }
 });
 
@@ -303,12 +309,18 @@ app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
         if (!title || !body) return res.status(400).send("Title and body are required.");
 
         const current = await Post.findOne({ slug: req.params.slug });
-        if (!current) return res.status(404).send("Post not found");
+        if (!current) {
+            req.session.flash = { type: "warning", text: "Post not found." };
+            return res.redirect("/blog");
+        }
 
         const newSlug = slugify(title, { lower: true, strict: true });
         if (newSlug !== current.slug) {
             const conflict = await Post.findOne({ slug: newSlug }).lean();
-            if (conflict) return res.status(409).send("Another post already uses that title.");
+            if (conflict) {
+                req.session.flash = { type: "warning", text: "Another post already uses that title." };
+                return res.redirect(`/admin/blog/${current.slug}/edit`);
+            }
         }
 
         current.title = title;
@@ -316,26 +328,30 @@ app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
         current.body = body;
         current.bodyHtml = mdToHtml(body);
         current.coverImage = coverImage || null;
-
         await current.save();
+
+        req.session.flash = { type: "success", text: "Post updated." };
         res.redirect(`/blog/${current.slug}`);
     } catch (err) {
         console.error("💥 POST update error:", err);
-        res.status(500).send("Failed to update post.");
+        req.session.flash = { type: "danger", text: "Failed to update post." };
+        res.redirect("/blog");
     }
 });
 
 app.post("/admin/blog/:slug/delete", ensureAuth, async (req, res) => {
     try {
         await Post.deleteOne({ slug: req.params.slug });
+        req.session.flash = { type: "success", text: "Post deleted." };
         res.redirect("/blog");
     } catch (err) {
         console.error("💥 delete error:", err);
-        res.status(500).send("Failed to delete post.");
+        req.session.flash = { type: "danger", text: "Failed to delete post." };
+        res.redirect("/blog");
     }
 });
 
-// ---------- SEO + diagnostics ----------
+// ───── SEO + diagnostics ─────
 app.get("/sitemap.xml", async (req, res) => {
     try {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
@@ -389,16 +405,6 @@ app.get("/rss.xml", async (req, res) => {
     }
 });
 
-// Quick “am I logged in?” debug (remove later)
-app.get("/me", (req, res) => {
-    res.json({
-        loggedIn: !!req.user,
-        user: req.user ? { id: req.user._id, email: req.user.email } : null,
-        hasSession: !!req.session
-    });
-});
-
-// Diagnostics
 app.get("/diag", (_req, res) => {
     const hasEnv = Boolean(process.env.MONGO_URI);
     const readyState = mongoose.connection?.readyState;
@@ -426,5 +432,4 @@ app.get("/dev/seed", async (_req, res) => {
 app.get("/health", (_req, res) => res.send("ok"));
 app.use((_req, res) => res.status(404).send("Not Found"));
 
-// ---------- Start server ----------
 app.listen(PORT, () => console.log(`🚀 http://localhost:${PORT}`));

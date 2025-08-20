@@ -13,21 +13,23 @@
                 <p class="text-muted mb-4">Notes from my learning-in-public journey.</p>
 
                 <% if (!posts || posts.length===0) { %>
-                    <div class="alert alert-info">No posts yet.</div>
+                    <div class="alert alert-info">
+                        No posts yet. Visit <code>/dev/seed</code> once to add sample posts.
+                    </div>
                     <% } else { %>
                         <% posts.forEach(p=> { %>
-                            <div class="list-group mb-3">
-                                <div class="list-group-item">
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-body">
                                     <div class="row g-3 align-items-center">
                                         <div class="col-12 col-md-3">
                                             <a href="/blog/<%= p.slug %>">
-                                                <img class="img-fluid rounded"
-                                                    src="<%= p.coverImage || '/img/share-default.jpg' %>"
-                                                    alt="<%= p.title %>">
+                                                <img src="<%= p.coverImage || '/img/share-default.jpg' %>"
+                                                    alt="<%= p.title %>" class="img-fluid rounded"
+                                                    style="aspect-ratio: 16/9; object-fit: cover;">
                                             </a>
                                         </div>
                                         <div class="col-12 col-md-9">
-                                            <div class="d-flex w-100 justify-content-between">
+                                            <div class="d-flex justify-content-between">
                                                 <h2 class="h5 mb-1">
                                                     <a class="text-decoration-none" href="/blog/<%= p.slug %>">
                                                         <%= p.title %>
@@ -37,20 +39,19 @@
                                                     <%= new Date(p.createdAt).toLocaleDateString() %>
                                                 </small>
                                             </div>
-                                            <p class="mb-2 text-muted">
-                                                <%= (p.body || "" ).slice(0, 180) %>
-                                                    <%= (p.body || "" ).length> 180 ? "…" : "" %>
+                                            <p class="mb-3 text-muted">
+                                                <%= (p.body || "" ).slice(0, 160) %>
+                                                    <%= (p.body || "" ).length> 160 ? "…" : "" %>
                                             </p>
 
                                             <div class="d-flex gap-2">
                                                 <a class="btn btn-sm btn-outline-secondary"
-                                                    href="/blog/<%= p.slug %>">Read More</a>
+                                                    href="/blog/<%= p.slug %>">Read more</a>
                                                 <% if (isAdmin) { %>
                                                     <a class="btn btn-sm btn-warning"
                                                         href="/admin/blog/<%= p.slug %>/edit">Edit</a>
                                                     <form method="post" action="/admin/blog/<%= p.slug %>/delete"
-                                                        class="d-inline"
-                                                        onsubmit="return confirm('Delete “<%= p.title %>”?');">
+                                                        class="d-inline" data-confirm='Delete “<%= p.title %>”?'>
                                                         <button class="btn btn-sm btn-danger"
                                                             type="submit">Delete</button>
                                                     </form>

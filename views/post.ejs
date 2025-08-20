@@ -1,32 +1,31 @@
 <%- include('partials/html-start', { title }) %>
     <%- include('partials/header') %>
 
-        <section class="section">
-            <div class="container blog-post" style="max-width: 860px;">
-                <h1 class="display-6 fw-bolder mb-1">
-                    <%= post.title %>
-                </h1>
-                <p class="text-muted">
-                    <%= new Date(post.createdAt).toLocaleDateString() %>
-                </p>
-
+        <section class="section blog-post">
+            <div class="container" style="max-width: 860px;">
                 <% if (post.coverImage) { %>
-                    <img class="img-fluid rounded mb-4" src="<%= post.coverImage %>" alt="<%= post.title %>">
+                    <div class="mb-4">
+                        <img src="<%= post.coverImage %>" alt="<%= post.title %>" class="img-fluid rounded"
+                            style="width:100%; aspect-ratio: 16/9; object-fit:cover;">
+                    </div>
                     <% } %>
 
-                        <div class="post-body lh-lg">
-                            <!-- Sanitized HTML produced from Markdown -->
-                            <%- html %>
+                        <h1 class="display-6 fw-bolder">
+                            <%= post.title %>
+                        </h1>
+                        <div class="text-muted mb-4">
+                            <%= new Date(post.createdAt).toLocaleDateString() %>
                         </div>
 
-                        <div class="mt-4 post-actions d-flex gap-2">
-                            <a class="btn btn-outline-secondary" href="/blog">← Back to Blog</a>
+                        <div class="post-body"><%- html %></div>
 
+                        <div class="mt-4 p-3 post-actions d-flex gap-2 align-items-center">
+                            <a class="btn btn-outline-secondary btn-sm" href="/blog">← Back to blog</a>
                             <% if (isAdmin) { %>
-                                <a class="btn btn-edit" href="/admin/blog/<%= post.slug %>/edit">Edit</a>
-                                <form method="post" action="/admin/blog/<%= post.slug %>/delete"
-                                    onsubmit="return confirm('Delete “<%= post.title %>”?');" class="d-inline">
-                                    <button class="btn btn-danger" type="submit">Delete</button>
+                                <a class="btn btn-edit btn-sm" href="/admin/blog/<%= post.slug %>/edit">Edit</a>
+                                <form method="post" action="/admin/blog/<%= post.slug %>/delete" class="d-inline"
+                                    data-confirm='Delete “<%= post.title %>”?'>
+                                    <button class="btn btn-danger btn-sm" type="submit">Delete</button>
                                 </form>
                                 <% } %>
                         </div>
