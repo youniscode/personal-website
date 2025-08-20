@@ -5,10 +5,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import Post from "./models/post.js";
 import slugify from "slugify";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
+
+// Models
+import Post from "./models/post.js";
+import User from "./models/user.js";
 
 // Auth deps
 import session from "express-session";
@@ -16,23 +19,28 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import bcrypt from "bcrypt";
 import MongoStore from "connect-mongo";
-import User from "./models/user.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Make secure cookies work behind Render's proxy
+if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+}
+
+// Proper __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Views/static/body
+// ---------- Views / static / body parsing ----------
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 
-// Site locals
+// ---------- Site-wide locals ----------
 app.locals.site = {
     name: process.env.NAME || "YourName",
     role: process.env.ROLE || "",
@@ -43,13 +51,13 @@ app.locals.site = {
     cvUrl: process.env.CV_URL || ""
 };
 
-// Active nav
+// Mark active nav path
 app.use((req, res, next) => {
     res.locals.path = req.path;
     next();
 });
 
-// Markdown → safe HTML
+// ---------- Helpers ----------
 function mdToHtml(md = "") {
     const raw = marked(md, { mangle: false, headerIds: true });
     return sanitizeHtml(raw, {
@@ -69,16 +77,18 @@ function mdToHtml(md = "") {
         }
     });
 }
+
 function absUrl(req, pathStr = "/") {
     const base = process.env.BASE_URL?.replace(/\/+$/, "") || `${req.protocol}://${req.get("host")}`;
     return `${base}${pathStr.startsWith("/") ? pathStr : `/${pathStr}`}`;
 }
+
 function summarize(htmlOrMd = "", n = 160) {
     const text = String(htmlOrMd).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
     return text.length > n ? text.slice(0, n - 1) + "…" : text;
 }
 
-// Default meta
+// Default meta for all pages
 app.use((req, res, next) => {
     res.locals.meta = {
         title: res.locals.title || app.locals.site.name,
@@ -86,12 +96,17 @@ app.use((req, res, next) => {
         type: "website",
         url: absUrl(req, req.path),
         canonical: absUrl(req, req.path),
-        image: null
+        image: null // html-start.ejs can fall back to /img/share-default.jpg
     };
     next();
 });
 
-// MongoDB
+// ---------- MongoDB ----------
+// Avoid auto-building indexes on Render each boot (faster/cheaper)
+if (process.env.NODE_ENV === "production") {
+    mongoose.set("autoIndex", false);
+}
+
 if (process.env.MONGO_URI) {
     mongoose
         .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000 })
@@ -101,15 +116,16 @@ if (process.env.MONGO_URI) {
     console.warn("⚠️ MONGO_URI not set; blog will be disabled.");
 }
 
-// ───── Sessions + Passport (local strategy) ─────
+// ---------- Sessions + Passport ----------
 const sessionSecret = process.env.SESSION_SECRET || "change-me-please";
+
 app.use(
     session({
         secret: sessionSecret,
         resave: false,
         saveUninitialized: false,
         cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+            maxAge: 1000 * 60 * 60 * 24 * 7,           // 7 days
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax"
         },
@@ -145,7 +161,6 @@ passport.deserializeUser(async (id, done) => {
         done(e);
     }
 });
-
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -155,17 +170,18 @@ app.use((req, res, next) => {
     next();
 });
 
-// Protect admin routes
+// Guard for admin-only routes
 function ensureAuth(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) return next();
     res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
 }
 
-// ───── Core pages ─────
+// ---------- Core pages ----------
 app.get("/", (req, res) => res.render("home", { title: "Home" }));
 app.get("/about", (req, res) => res.render("about", { title: "About" }));
 app.get("/projects", (req, res) => res.render("projects", { title: "Projects" }));
 
+// Contact (demo)
 app.get("/contact", (req, res) =>
     res.render("contact", { title: "Contact", sent: req.query.sent === "1" })
 );
@@ -176,13 +192,14 @@ app.post("/contact", (req, res) => {
     res.redirect("/contact?sent=1");
 });
 
-// ───── Login / Logout ─────
+// ---------- Login / Logout ----------
 app.get("/login", (req, res) => {
     res.render("login", {
         title: "Login",
-        error: req.query.err ? "Invalid email or password." : null,
+        error: req.query.err ? "Invalid email or password." : null
     });
 });
+
 app.post(
     "/login",
     (req, res, next) => {
@@ -192,6 +209,7 @@ app.post(
     passport.authenticate("local", { failureRedirect: "/login?err=1" }),
     (req, res) => res.redirect(req._nextUrl || "/blog")
 );
+
 app.post("/logout", (req, res, next) => {
     req.logout(err => {
         if (err) return next(err);
@@ -199,7 +217,7 @@ app.post("/logout", (req, res, next) => {
     });
 });
 
-// ───── Blog (public) ─────
+// ---------- Blog (public) ----------
 app.get("/blog", async (req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
@@ -247,7 +265,7 @@ app.get("/blog/:slug", async (req, res) => {
     }
 });
 
-// ───── Blog admin (protected) ─────
+// ---------- Blog admin (protected) ----------
 app.get("/admin/blog/new", ensureAuth, (_req, res) => {
     res.render("new-post", { title: "New Post" });
 });
@@ -317,7 +335,7 @@ app.post("/admin/blog/:slug/delete", ensureAuth, async (req, res) => {
     }
 });
 
-// ───── SEO + diagnostics ─────
+// ---------- SEO + diagnostics ----------
 app.get("/sitemap.xml", async (req, res) => {
     try {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
@@ -371,6 +389,16 @@ app.get("/rss.xml", async (req, res) => {
     }
 });
 
+// Quick “am I logged in?” debug (remove later)
+app.get("/me", (req, res) => {
+    res.json({
+        loggedIn: !!req.user,
+        user: req.user ? { id: req.user._id, email: req.user.email } : null,
+        hasSession: !!req.session
+    });
+});
+
+// Diagnostics
 app.get("/diag", (_req, res) => {
     const hasEnv = Boolean(process.env.MONGO_URI);
     const readyState = mongoose.connection?.readyState;
@@ -398,4 +426,5 @@ app.get("/dev/seed", async (_req, res) => {
 app.get("/health", (_req, res) => res.send("ok"));
 app.use((_req, res) => res.status(404).send("Not Found"));
 
+// ---------- Start server ----------
 app.listen(PORT, () => console.log(`🚀 http://localhost:${PORT}`));

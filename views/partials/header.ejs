@@ -1,24 +1,18 @@
-<nav class="navbar navbar-expand-lg site-navbar shadow-sm">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
     <div class="container">
-        <!-- Brand / Logo -->
         <a class="navbar-brand d-flex align-items-center brand-logo" href="/" aria-label="Home">
-            <svg viewBox="0 0 48 48" width="36" height="36" aria-hidden="true">
-                <!-- Badge -->
+            <!-- Scalable YH logo -->
+            <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
                 <rect x="2" y="2" width="44" height="44" rx="10" fill="url(#grad)" />
-                <!-- YH letters -->
                 <g fill="none" stroke="white" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
-                    <!-- Y -->
                     <path d="M13 12 L19 20 L19 36" />
                     <path d="M25 12 L19 20" />
-                    <!-- H -->
                     <path d="M29 12 L29 36" />
                     <path d="M29 24 L39 24" />
                     <path d="M39 12 L39 36" />
                 </g>
-                <!-- Subtle inner border -->
                 <rect x="2" y="2" width="44" height="44" rx="10" fill="none" stroke="rgba(255,255,255,.25)"
                     stroke-width="1.2" />
-                <!-- Gradient fill -->
                 <defs>
                     <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stop-color="#2f6bff" />
@@ -28,35 +22,36 @@
             </svg>
         </a>
 
-        <!-- Mobile toggler -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <!-- Links -->
-        <div id="siteNav" class="collapse navbar-collapse">
-            <ul class="navbar-nav ms-auto align-items-lg-center">
-                <li class="nav-item">
-                    <a class="nav-link <%= path === '/projects' ? 'active' : '' %>" href="/projects">Projects</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <%= path === '/about' ? 'active' : '' %>" href="/about">About</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <%= path === '/contact' ? 'active' : '' %>" href="/contact">Contact</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <%= path.startsWith('/blog') ? 'active' : '' %>" href="/blog">Blog</a>
-                </li>
+        <div id="nav" class="collapse navbar-collapse">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link <%= path === '/projects' ? 'active' : '' %>"
+                        href="/projects">Projects</a></li>
+                <li class="nav-item"><a class="nav-link <%= path === '/about' ? 'active' : '' %>"
+                        href="/about">About</a></li>
+                <li class="nav-item"><a class="nav-link <%= path === '/contact' ? 'active' : '' %>"
+                        href="/contact">Contact</a></li>
+                <li class="nav-item"><a class="nav-link <%= path.startsWith('/blog') ? 'active' : '' %>"
+                        href="/blog">Blog</a></li>
 
-                <% if (typeof isAdmin !=='undefined' && isAdmin) { %>
-                    <li class="nav-item ms-lg-2">
-                        <a href="/admin/blog/new" class="btn btn-sm btn-gold">New Post</a>
+                <% if (isAdmin) { %>
+                    <li class="nav-item">
+                        <a class="nav-link <%= path === '/admin/blog/new' ? 'active' : '' %>" href="/admin/blog/new">New
+                            Post</a>
                     </li>
-                    <li class="nav-item ms-lg-2">
-                        <a href="/logout" class="btn btn-sm btn-outline-light">Log Out</a>
+                    <li class="nav-item ms-2">
+                        <form method="post" action="/logout" class="d-inline">
+                            <button class="btn btn-sm btn-outline-light" type="submit">Log out</button>
+                        </form>
                     </li>
-                    <% } %>
+                    <% } else { %>
+                        <li class="nav-item">
+                            <a class="nav-link <%= path === '/login' ? 'active' : '' %>" href="/login">Login</a>
+                        </li>
+                        <% } %>
             </ul>
         </div>
     </div>

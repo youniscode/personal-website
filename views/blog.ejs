@@ -5,8 +5,7 @@
             <div class="container">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h1 class="display-5 fw-bolder mb-0">Blog</h1>
-
-                    <% if (typeof isAdmin !=='undefined' && isAdmin) { %>
+                    <% if (isAdmin) { %>
                         <a class="btn btn-outline-secondary btn-sm" href="/admin/blog/new">New Post</a>
                         <% } %>
                 </div>
@@ -14,52 +13,44 @@
                 <p class="text-muted mb-4">Notes from my learning-in-public journey.</p>
 
                 <% if (!posts || posts.length===0) { %>
-                    <div class="alert alert-info">
-                        No posts yet. Visit <code>/dev/seed</code> once to add sample posts.
-                    </div>
+                    <div class="alert alert-info">No posts yet.</div>
                     <% } else { %>
-
-                        <div class="list-group">
-                            <% posts.forEach(p=> { %>
-                                <div class="list-group-item py-4">
+                        <% posts.forEach(p=> { %>
+                            <div class="list-group mb-3">
+                                <div class="list-group-item">
                                     <div class="row g-3 align-items-center">
-                                        <!-- Thumb -->
                                         <div class="col-12 col-md-3">
-                                            <a href="/blog/<%= p.slug %>"
-                                                class="d-block ratio ratio-16x9 rounded overflow-hidden bg-light">
-                                                <img src="<%= (p.coverImage && p.coverImage.trim() !== '') ? p.coverImage : '/img/share-default.jpg' %>"
-                                                    alt="<%= p.title %>" class="w-100 h-100" style="object-fit: cover;">
+                                            <a href="/blog/<%= p.slug %>">
+                                                <img class="img-fluid rounded"
+                                                    src="<%= p.coverImage || '/img/share-default.jpg' %>"
+                                                    alt="<%= p.title %>">
                                             </a>
                                         </div>
-
-                                        <!-- Meta -->
                                         <div class="col-12 col-md-9">
-                                            <div class="d-flex justify-content-between">
-                                                <h2 class="h5 mb-2">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h2 class="h5 mb-1">
                                                     <a class="text-decoration-none" href="/blog/<%= p.slug %>">
                                                         <%= p.title %>
                                                     </a>
                                                 </h2>
-                                                <small class="text-muted ms-3">
+                                                <small class="text-muted">
                                                     <%= new Date(p.createdAt).toLocaleDateString() %>
                                                 </small>
                                             </div>
-
                                             <p class="mb-2 text-muted">
-                                                <%= (p.body || "" ).slice(0, 200) %>
-                                                    <%= (p.body || "" ).length> 200 ? "…" : "" %>
+                                                <%= (p.body || "" ).slice(0, 180) %>
+                                                    <%= (p.body || "" ).length> 180 ? "…" : "" %>
                                             </p>
 
                                             <div class="d-flex gap-2">
-                                                <a class="btn btn-sm btn-outline-dark" href="/blog/<%= p.slug %>">Read
-                                                    more</a>
-
-                                                <% if (typeof isAdmin !=='undefined' && isAdmin) { %>
+                                                <a class="btn btn-sm btn-outline-secondary"
+                                                    href="/blog/<%= p.slug %>">Read More</a>
+                                                <% if (isAdmin) { %>
                                                     <a class="btn btn-sm btn-warning"
                                                         href="/admin/blog/<%= p.slug %>/edit">Edit</a>
                                                     <form method="post" action="/admin/blog/<%= p.slug %>/delete"
-                                                        onsubmit="return confirm('Delete “<%= p.title %>”?');"
-                                                        class="d-inline">
+                                                        class="d-inline"
+                                                        onsubmit="return confirm('Delete “<%= p.title %>”?');">
                                                         <button class="btn btn-sm btn-danger"
                                                             type="submit">Delete</button>
                                                     </form>
@@ -68,10 +59,9 @@
                                         </div>
                                     </div>
                                 </div>
-                                <% }) %>
-                        </div>
-
-                        <% } %>
+                            </div>
+                            <% }) %>
+                                <% } %>
             </div>
         </section>
 

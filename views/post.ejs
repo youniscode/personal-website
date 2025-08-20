@@ -1,43 +1,35 @@
 <%- include('partials/html-start', { title }) %>
     <%- include('partials/header') %>
 
-        <!-- Cover / Hero -->
-        <section class="post-hero">
-            <div class="post-cover">
-                <img src="<%= (post.coverImage && post.coverImage.trim() !== '') ? post.coverImage : '/img/share-default.jpg' %>"
-                    alt="<%= post.title %>">
-            </div>
-        </section>
+        <section class="section">
+            <div class="container blog-post" style="max-width: 860px;">
+                <h1 class="display-6 fw-bolder mb-1">
+                    <%= post.title %>
+                </h1>
+                <p class="text-muted">
+                    <%= new Date(post.createdAt).toLocaleDateString() %>
+                </p>
 
-        <!-- Article -->
-        <section class="section blog-post">
-            <div class="container" style="max-width: 860px;">
-                <header class="mb-3">
-                    <h1 class="display-6 fw-bolder mb-1">
-                        <%= post.title %>
-                    </h1>
-                    <div class="text-muted">
-                        <%= new Date(post.createdAt).toLocaleDateString() %>
-                    </div>
-                </header>
+                <% if (post.coverImage) { %>
+                    <img class="img-fluid rounded mb-4" src="<%= post.coverImage %>" alt="<%= post.title %>">
+                    <% } %>
 
-                <article class="post-body lh-lg">
-                    <!-- Sanitized HTML produced from Markdown -->
-                    <%- html %>
-                </article>
+                        <div class="post-body lh-lg">
+                            <!-- Sanitized HTML produced from Markdown -->
+                            <%- html %>
+                        </div>
 
-                <!-- Actions -->
-                <footer class="mt-4 post-actions d-flex gap-2 flex-wrap">
-                    <a class="btn btn-outline-secondary" href="/blog">← Back to blog</a>
+                        <div class="mt-4 post-actions d-flex gap-2">
+                            <a class="btn btn-outline-secondary" href="/blog">← Back to Blog</a>
 
-                    <% if (typeof isAdmin !=='undefined' && isAdmin) { %>
-                        <a class="btn btn-edit" href="/admin/blog/<%= post.slug %>/edit">Edit</a>
-                        <form method="post" action="/admin/blog/<%= post.slug %>/delete"
-                            onsubmit="return confirm('Delete “<%= post.title %>”?');" class="d-inline">
-                            <button type="submit" class="btn btn-danger">Delete</button>
-                        </form>
-                        <% } %>
-                </footer>
+                            <% if (isAdmin) { %>
+                                <a class="btn btn-edit" href="/admin/blog/<%= post.slug %>/edit">Edit</a>
+                                <form method="post" action="/admin/blog/<%= post.slug %>/delete"
+                                    onsubmit="return confirm('Delete “<%= post.title %>”?');" class="d-inline">
+                                    <button class="btn btn-danger" type="submit">Delete</button>
+                                </form>
+                                <% } %>
+                        </div>
             </div>
         </section>
 
