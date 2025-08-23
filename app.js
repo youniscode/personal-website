@@ -1,4 +1,4 @@
-// app.js — Express + EJS + Mongo + Markdown blog + Passport auth
+// app.js — Express + EJS + Mongo + Markdown blog + Passport auth + Change Password + Draft support
 
 import express from "express";
 import path from "path";
@@ -18,6 +18,9 @@ import bcrypt from "bcrypt";
 import MongoStore from "connect-mongo";
 import User from "./models/user.js";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 1) Env + app bootstrap
+// ─────────────────────────────────────────────────────────────────────────────
 dotenv.config();
 
 const app = express();
@@ -32,7 +35,7 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 
-// Site locals
+// Site locals (available in EJS via `site`)
 app.locals.site = {
     name: process.env.NAME || "YourName",
     role: process.env.ROLE || "",
@@ -43,13 +46,15 @@ app.locals.site = {
     cvUrl: process.env.CV_URL || ""
 };
 
-// Active nav
+// Mark active nav path
 app.use((req, res, next) => {
     res.locals.path = req.path;
     next();
 });
 
-// Markdown → safe HTML
+// ─────────────────────────────────────────────────────────────────────────────
+/** 2) Helpers: Markdown→HTML, URL builder, summary, default meta */
+// ─────────────────────────────────────────────────────────────────────────────
 function mdToHtml(md = "") {
     const raw = marked(md, { mangle: false, headerIds: true });
     return sanitizeHtml(raw, {
@@ -80,7 +85,7 @@ function summarize(htmlOrMd = "", n = 160) {
     return text.length > n ? text.slice(0, n - 1) + "…" : text;
 }
 
-// Default meta
+// Default SEO meta
 app.use((req, res, next) => {
     res.locals.meta = {
         title: res.locals.title || app.locals.site.name,
@@ -88,17 +93,21 @@ app.use((req, res, next) => {
         type: "website",
         url: absUrl(req, req.path),
         canonical: absUrl(req, req.path),
-        image: null
+        image: null // html-start.ejs can fall back to /img/share-default.jpg
     };
     next();
 });
 
-// Mongoose index behavior for production
+// Treat missing draft as published (for older docs)
+const pubFilter = { $or: [{ draft: false }, { draft: { $exists: false } }] };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3) MongoDB
+// ─────────────────────────────────────────────────────────────────────────────
 if (process.env.NODE_ENV === "production") {
     mongoose.set("autoIndex", false);
 }
 
-// MongoDB
 if (process.env.MONGO_URI) {
     mongoose
         .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000 })
@@ -108,7 +117,9 @@ if (process.env.MONGO_URI) {
     console.warn("⚠️ MONGO_URI not set; blog will be disabled.");
 }
 
-// ───── Sessions + Passport (local strategy) ─────
+// ─────────────────────────────────────────────────────────────────────────────
+// 4) Sessions + Passport (local strategy) + Flash
+// ─────────────────────────────────────────────────────────────────────────────
 const sessionSecret = process.env.SESSION_SECRET || "change-me-please";
 app.use(
     session({
@@ -116,17 +127,28 @@ app.use(
         resave: false,
         saveUninitialized: false,
         cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+            maxAge: 1000 * 60 * 60 * 24 * 7,         // 7 days
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax"
         },
         store: MongoStore.create({
             mongoUrl: process.env.MONGO_URI,
-            ttl: 60 * 60 * 24 * 14 // 14 days
+            ttl: 60 * 60 * 24 * 14                    // 14 days
         })
     })
 );
 
+// Simple one-shot flash messages
+app.use((req, res, next) => {
+    res.locals.flash = req.session?.flash || null;
+    if (req.session) delete req.session.flash;
+    next();
+});
+function setFlash(req, type, text) {
+    if (req.session) req.session.flash = { type, text };
+}
+
+// Passport local strategy
 passport.use(
     new LocalStrategy(
         { usernameField: "email", passwordField: "password" },
@@ -152,18 +174,8 @@ passport.deserializeUser(async (id, done) => {
         done(e);
     }
 });
-
 app.use(passport.initialize());
 app.use(passport.session());
-
-// Make a safe flash object available to all views.
-// If you later set `req.session.flash = { type, text }`, it'll show once and then clear.
-app.use((req, res, next) => {
-    res.locals.flash = req.session?.flash || null;
-    if (req.session) delete req.session.flash;
-    next();
-});
-
 
 // Expose admin flag to views
 app.use((req, res, next) => {
@@ -171,17 +183,20 @@ app.use((req, res, next) => {
     next();
 });
 
-// Protect admin routes
+// Single definition of ensureAuth (⚠ keep only this one)
 function ensureAuth(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) return next();
     res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
 }
 
-// ───── Core pages ─────
+// ─────────────────────────────────────────────────────────────────────────────
+// 5) Core pages
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/", (req, res) => res.render("home", { title: "Home" }));
 app.get("/about", (req, res) => res.render("about", { title: "About" }));
 app.get("/projects", (req, res) => res.render("projects", { title: "Projects" }));
 
+// Contact demo
 app.get("/contact", (req, res) =>
     res.render("contact", { title: "Contact", sent: req.query.sent === "1" })
 );
@@ -192,7 +207,9 @@ app.post("/contact", (req, res) => {
     res.redirect("/contact?sent=1");
 });
 
-// ───── Login / Logout ─────
+// ─────────────────────────────────────────────────────────────────────────────
+// 6) Auth: Login / Logout / Change Password
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/login", (req, res) => {
     res.render("login", {
         title: "Login",
@@ -215,38 +232,77 @@ app.post("/logout", (req, res, next) => {
     });
 });
 
-// ───── Change password (admin) ─────
-app.get("/admin/password", ensureAuth, (req, res) => {
-    res.render("admin-password", { title: "Change Password", error: null, ok: null });
+// Change Password (admin only)
+app.get("/admin/change-password", ensureAuth, (req, res) => {
+    res.render("change-password", { title: "Change Password" });
 });
-app.post("/admin/password", ensureAuth, async (req, res) => {
+app.post("/admin/change-password", ensureAuth, async (req, res) => {
     try {
-        const { currentPassword, newPassword } = req.body;
-        const user = await User.findById(req.user._id);
-        if (!user) return res.render("admin-password", { title: "Change Password", error: "User not found", ok: null });
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            setFlash(req, "warning", "Please fill in all fields.");
+            return res.redirect("/admin/change-password");
+        }
+        if (newPassword.length < 8) {
+            setFlash(req, "warning", "New password must be at least 8 characters.");
+            return res.redirect("/admin/change-password");
+        }
+        if (newPassword !== confirmPassword) {
+            setFlash(req, "warning", "New password and confirmation do not match.");
+            return res.redirect("/admin/change-password");
+        }
+
+        const user = await User.findById(req.user._id || req.user.id);
+        if (!user) {
+            setFlash(req, "danger", "User not found.");
+            return res.redirect("/login");
+        }
 
         const ok = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!ok) return res.render("admin-password", { title: "Change Password", error: "Current password is incorrect", ok: null });
+        if (!ok) {
+            setFlash(req, "danger", "Current password is incorrect.");
+            return res.redirect("/admin/change-password");
+        }
+
+        const same = await bcrypt.compare(newPassword, user.passwordHash);
+        if (same) {
+            setFlash(req, "warning", "New password must be different from the old one.");
+            return res.redirect("/admin/change-password");
+        }
 
         user.passwordHash = await bcrypt.hash(newPassword, 12);
         await user.save();
-        res.render("admin-password", { title: "Change Password", error: null, ok: "Password updated!" });
+
+        req.session.regenerate(err => {
+            if (err) {
+                setFlash(req, "success", "Password updated successfully.");
+                return res.redirect("/blog");
+            }
+            req.login(user, loginErr => {
+                if (loginErr) {
+                    setFlash(req, "success", "Password updated successfully.");
+                    return res.redirect("/blog");
+                }
+                setFlash(req, "success", "Password updated successfully.");
+                return res.redirect("/blog");
+            });
+        });
     } catch (e) {
-        console.error("password change error:", e);
-        res.render("admin-password", { title: "Change Password", error: "Something went wrong", ok: null });
+        console.error("💥 change-password error:", e);
+        setFlash(req, "danger", "Could not update password. Please try again.");
+        res.redirect("/admin/change-password");
     }
 });
 
-// Common published filter: treat missing draft as published
-const pubFilter = { $or: [{ draft: false }, { draft: { $exists: false } }] };
-
-// ───── Blog (public) ─────
+// ─────────────────────────────────────────────────────────────────────────────
+// 7) Blog (public)
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/blog", async (req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
 
-        // Logged-out users: only published (draft:false OR draft missing)
-        const query = req.user ? {} : pubFilter;
+        const query = req.user ? {} : pubFilter; // Admins see all; public sees non-draft
         const posts = await Post.find(query).sort({ createdAt: -1 }).lean();
 
         res.locals.meta = {
@@ -271,7 +327,6 @@ app.get("/blog/:slug", async (req, res) => {
         const post = await Post.findOne({ slug: req.params.slug }).lean();
         if (!post) return res.status(404).send("Post not found");
 
-        // If it is a draft (true), only admins can view
         const isDraft = !!post.draft;
         if (isDraft && !req.user) return res.status(404).send("Post not found");
 
@@ -295,7 +350,9 @@ app.get("/blog/:slug", async (req, res) => {
     }
 });
 
-// ───── Blog admin (protected) ─────
+// ─────────────────────────────────────────────────────────────────────────────
+// 8) Blog admin (protected)
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/admin/blog/new", ensureAuth, (_req, res) => {
     res.render("new-post", { title: "New Post" });
 });
@@ -367,14 +424,15 @@ app.post("/admin/blog/:slug/delete", ensureAuth, async (req, res) => {
     }
 });
 
-// ───── SEO + diagnostics ─────
+// ─────────────────────────────────────────────────────────────────────────────
+// 9) SEO + diagnostics
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/sitemap.xml", async (req, res) => {
     try {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
         const staticUrls = ["/", "/projects", "/about", "/contact", "/blog"]
             .map(u => `  <url><loc>${base}${u}</loc><changefreq>weekly</changefreq></url>`).join("\n");
 
-        // Only published posts (draft:false OR no draft field)
         const posts = await Post.find(pubFilter).sort({ createdAt: -1 }).lean();
 
         const postUrls = posts
@@ -396,8 +454,6 @@ ${postUrls}
 app.get("/rss.xml", async (req, res) => {
     try {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
-
-        // Only published posts (draft:false OR no draft field)
         const posts = await Post.find(pubFilter).sort({ createdAt: -1 }).lean();
 
         const items = posts.map(p => {
@@ -429,6 +485,7 @@ app.get("/rss.xml", async (req, res) => {
     }
 });
 
+// Diagnostics
 app.get("/diag", (_req, res) => {
     const hasEnv = Boolean(process.env.MONGO_URI);
     const readyState = mongoose.connection?.readyState;
@@ -456,4 +513,7 @@ app.get("/dev/seed", async (_req, res) => {
 app.get("/health", (_req, res) => res.send("ok"));
 app.use((_req, res) => res.status(404).send("Not Found"));
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 10) Start server
+// ─────────────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`🚀 http://localhost:${PORT}`));
