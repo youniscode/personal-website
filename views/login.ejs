@@ -1,32 +1,85 @@
-<%- include('partials/html-start', { title }) %>
+<%- include('partials/html-start', { title: 'Login' }) %>
     <%- include('partials/header') %>
 
-        <section class="section">
-            <div class="container" style="max-width: 480px;">
-                <h1 class="h3 fw-bold mb-3">Login</h1>
+        <div class="container auth-wrap py-5">
+            <div class="row justify-content-center">
+                <div class="col-md-6 col-lg-5">
+                    <div class="card shadow-sm auth-card">
+                        <div class="card-body">
+                            <!-- Branding row -->
+                            <div class="d-flex align-items-center mb-4">
+                                <div class="me-2 brand-dot">
+                                    <!-- Your YH logo -->
+                                    <svg viewBox="0 0 48 48" width="28" height="28" aria-hidden="true">
+                                        <defs>
+                                            <linearGradient id="gradLogin" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stop-color="#2f6bff" />
+                                                <stop offset="100%" stop-color="#7a2dff" />
+                                            </linearGradient>
+                                        </defs>
+                                        <rect x="2" y="2" width="44" height="44" rx="10" fill="url(#gradLogin)" />
+                                        <g fill="none" stroke="white" stroke-width="3.6" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M13 12 L19 20 L19 36" />
+                                            <path d="M25 12 L19 20" />
+                                            <path d="M29 12 L29 36" />
+                                            <path d="M29 24 L39 24" />
+                                            <path d="M39 12 L39 36" />
+                                        </g>
+                                    </svg>
+                                </div>
+                                <h4 class="mb-0 fw-semibold">Admin Login</h4>
+                            </div>
 
-                <% if (error) { %>
-                    <div class="alert alert-danger">
-                        <%= error %>
+                            <% if (error) { %>
+                                <div class="alert alert-danger">
+                                    <%= error %>
+                                </div>
+                                <% } %>
+
+                                    <form method="post" action="/login">
+                                        <div class="mb-3">
+                                            <label for="email" class="form-label">Email</label>
+                                            <input type="email" id="email" name="email" class="form-control"
+                                                placeholder="you@example.com" required />
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="password" class="form-label">Password</label>
+                                            <div class="input-group">
+                                                <input type="password" id="password" name="password"
+                                                    class="form-control" placeholder="••••••••" required />
+                                                <button type="button" class="btn btn-outline-secondary"
+                                                    onclick="togglePw()">Show</button>
+                                            </div>
+                                            <small class="text-muted">Use the admin account you seeded.</small>
+                                        </div>
+
+                                        <!-- Forgot password (mail link) -->
+                                        <div class="d-flex justify-content-end mb-3">
+                                            <a class="small text-muted"
+                                                href="mailto:<%= site.email %>?subject=Admin%20login%20help">Forgot
+                                                password?</a>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-dark w-100">Log in</button>
+                                    </form>
+
+                                    <p class="text-muted small mt-3">
+                                        Tip: if you forgot the seed password, run the
+                                        <code>scripts/seedAdmin.mjs</code> again locally with a new one.
+                                    </p>
+                        </div>
                     </div>
-                    <% } %>
-
-                        <form method="post"
-                            action="/login<%= typeof query !== 'undefined' && query ? '?' + query : '' %>">
-                            <div class="mb-3">
-                                <label class="form-label">Email</label>
-                                <input name="email" type="email" class="form-control" required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Password</label>
-                                <input name="password" type="password" class="form-control" required>
-                            </div>
-
-                            <button class="btn btn-primary" type="submit">Log in</button>
-                        </form>
+                </div>
             </div>
-        </section>
+        </div>
 
-        <%- include('partials/footer') %>
-            <%- include('partials/html-end') %>
+        <script>
+            function togglePw() {
+                const pw = document.getElementById("password");
+                pw.type = pw.type === "password" ? "text" : "password";
+            }
+        </script>
+
+        <%- include('partials/html-end') %>
