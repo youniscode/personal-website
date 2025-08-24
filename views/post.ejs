@@ -1,55 +1,63 @@
-<%- include('partials/html-start', { title }) %>
+<%- include('partials/html-start', { title: title }) %>
     <%- include('partials/header') %>
 
-        <section class="section blog-post">
-            <div class="container" style="max-width: 860px;">
-                <% if (post.coverImage) { %>
-                    <div class="mb-4">
-                        <img src="<%= post.coverImage %>" alt="<%= post.title %>" class="img-fluid rounded"
-                            style="width:100%; aspect-ratio: 16/9; object-fit:cover;">
+        <article class="section blog-post">
+            <div class="container" style="max-width: 820px;">
+
+                <!-- Title + meta -->
+                <header class="mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <h1 class="display-6 fw-bolder mb-0">
+                            <%= post.title %>
+                        </h1>
+                        <% if (isAdmin && post.published===false) { %>
+                            <span class="badge rounded-pill text-bg-secondary">Draft</span>
+                            <% } %>
                     </div>
+                    <p class="text-muted mb-0">
+                        <time datetime="<%= new Date(post.createdAt).toISOString() %>">
+                            <%= new Date(post.createdAt).toLocaleDateString() %>
+                        </time>
+                        <% if (post.updatedAt && post.updatedAt.toString() !==post.createdAt.toString()) { %>
+                            · <small>Updated <%= new Date(post.updatedAt).toLocaleDateString() %></small>
+                            <% } %>
+                    </p>
+                </header>
+
+                <!-- Cover image -->
+                <% if (post.coverImage) { %>
+                    <figure class="post-cover mb-4">
+                        <img src="<%= post.coverImage %>" alt="<%= post.title %>"
+                            class="img-fluid rounded shadow-sm w-100" style="aspect-ratio: 16/9; object-fit: cover;" />
+                    </figure>
                     <% } %>
 
-                        <div class="d-flex align-items-center gap-2">
-                            <h1 class="display-6 fw-bolder mb-0">
-                                <%= post.title %>
-                            </h1>
-                            <% if (post.draft) { %>
-                                <span class="badge bg-warning text-dark">Draft</span>
-                                <% } %>
+                        <!-- Body -->
+                        <div class="post-body lh-lg fs-5">
+                            <!-- Sanitized HTML produced from Markdown -->
+                            <%- html %>
                         </div>
 
-                        <div class="text-muted mb-4">
-                            <%= new Date(post.createdAt).toLocaleDateString() %>
-                        </div>
-
-                        <div class="post-body"><%- html %></div>
-
-                        <div class="mt-4 p-3 post-actions d-flex gap-2 align-items-center">
-                            <a class="btn btn-outline-secondary btn-sm" href="/blog">← Back to blog</a>
-                            <% if (isAdmin) { %>
+                        <!-- Admin actions -->
+                        <% if (isAdmin) { %>
+                            <footer class="mt-4 post-actions d-flex gap-2 align-items-center">
                                 <a class="btn btn-edit btn-sm" href="/admin/blog/<%= post.slug %>/edit">Edit</a>
+                                <form method="post" action="/admin/blog/<%= post.slug %>/delete"
+                                    onsubmit="return confirm('Delete “<%= post.title %>”?');" class="d-inline">
+                                    <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                                </form>
+                                <span class="ms-auto text-muted small">
+                                    <%= post.published ? 'Published' : 'Draft (private)' %>
+                                </span>
+                            </footer>
+                            <% } %>
 
-                                <% if (post.draft) { %>
-                                    <form method="post" action="/admin/blog/<%= post.slug %>/publish" class="d-inline">
-                                        <button class="btn btn-success btn-sm" type="submit">Publish</button>
-                                    </form>
-                                    <% } else { %>
-                                        <form method="post" action="/admin/blog/<%= post.slug %>/unpublish"
-                                            class="d-inline">
-                                            <button class="btn btn-outline-warning btn-sm"
-                                                type="submit">Unpublish</button>
-                                        </form>
-                                        <% } %>
-
-                                            <form method="post" action="/admin/blog/<%= post.slug %>/delete"
-                                                class="d-inline" data-confirm='Delete “<%= post.title %>”?'>
-                                                <button class="btn btn-danger btn-sm" type="submit">Delete</button>
-                                            </form>
-                                            <% } %>
-                        </div>
+                                <!-- Back -->
+                                <div class="mt-4">
+                                    <a href="/blog" class="btn btn-outline-secondary btn-sm">← Back to Blog</a>
+                                </div>
             </div>
-        </section>
+        </article>
 
         <%- include('partials/footer') %>
             <%- include('partials/html-end') %>

@@ -1,12 +1,12 @@
 // app.js — Express + EJS + Mongo + Markdown blog + Passport auth
-// ------------------------------------------------------------------
+// Includes: login session, change-password, draft/publish, search, pagination
 
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import Post from "./models/post.js";       // Post schema should include { published: { type:Boolean, default:true } }
+import Post from "./models/post.js";
 import slugify from "slugify";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
@@ -21,9 +21,6 @@ import User from "./models/user.js";
 
 dotenv.config();
 
-// ------------------------------------------------------------------
-// App bootstrap
-// ------------------------------------------------------------------
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -36,7 +33,7 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 
-// Site-wide locals (available in all templates as "site")
+// Site locals
 app.locals.site = {
     name: process.env.NAME || "YourName",
     role: process.env.ROLE || "",
@@ -44,39 +41,46 @@ app.locals.site = {
     phone: process.env.PHONE || "",
     location: process.env.LOCATION || "",
     linkedin: process.env.LINKEDIN || "",
-    cvUrl: process.env.CV_URL || ""
+    cvUrl: process.env.CV_URL || "",
 };
 
-// Make current path available for active-nav styles
+// Current path + default flash
 app.use((req, res, next) => {
     res.locals.path = req.path;
+    if (typeof res.locals.flash === "undefined") res.locals.flash = null;
     next();
 });
 
-// ------------------------------------------------------------------
-// Helpers: Markdown → Safe HTML, absolute URL, summarizer, default meta
-// ------------------------------------------------------------------
+// Markdown → safe HTML
 function mdToHtml(md = "") {
     const raw = marked(md, { mangle: false, headerIds: true });
     return sanitizeHtml(raw, {
         allowedTags: sanitizeHtml.defaults.allowedTags.concat([
-            "img", "h1", "h2", "h3", "h4", "h5", "h6"
+            "img",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
         ]),
         allowedAttributes: {
             a: ["href", "name", "target", "rel"],
             img: ["src", "alt"],
-            "*": ["id", "class"]
+            "*": ["id", "class"],
         },
         transformTags: {
-            a: (_t, attrs) => ({
+            a: (_tag, attrs) => ({
                 tagName: "a",
-                attribs: { ...attrs, target: "_blank", rel: "noopener" }
-            })
-        }
+                attribs: { ...attrs, target: "_blank", rel: "noopener" },
+            }),
+        },
     });
 }
 function absUrl(req, pathStr = "/") {
-    const base = process.env.BASE_URL?.replace(/\/+$/, "") || `${req.protocol}://${req.get("host")}`;
+    const base =
+        process.env.BASE_URL?.replace(/\/+$/, "") ||
+        `${req.protocol}://${req.get("host")}`;
     return `${base}${pathStr.startsWith("/") ? pathStr : `/${pathStr}`}`;
 }
 function summarize(htmlOrMd = "", n = 160) {
@@ -84,7 +88,7 @@ function summarize(htmlOrMd = "", n = 160) {
     return text.length > n ? text.slice(0, n - 1) + "…" : text;
 }
 
-// Default meta (pages can override later)
+// Default meta
 app.use((req, res, next) => {
     res.locals.meta = {
         title: res.locals.title || app.locals.site.name,
@@ -92,51 +96,40 @@ app.use((req, res, next) => {
         type: "website",
         url: absUrl(req, req.path),
         canonical: absUrl(req, req.path),
-        image: null // html-start.ejs should fall back to /img/share-default.jpg
+        image: null,
     };
     next();
 });
 
-// ------------------------------------------------------------------
-// MongoDB (disable autoIndex in production to avoid index rebuilds)
-// ------------------------------------------------------------------
+// Mongoose (avoid index rebuild in prod)
 if (process.env.NODE_ENV === "production") {
     mongoose.set("autoIndex", false);
 }
-
 if (process.env.MONGO_URI) {
     mongoose
         .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000 })
         .then(() => console.log("✅ MongoDB connected"))
         .catch((err) => console.error("❌ Mongo error:", err.message));
 } else {
-    console.warn("⚠️  MONGO_URI not set; blog will be disabled.");
+    console.warn("⚠️ MONGO_URI not set; blog will be disabled.");
 }
 
-// ------------------------------------------------------------------
-// Sessions + Passport (local strategy)
-// ------------------------------------------------------------------
+// Sessions + Passport
 const sessionSecret = process.env.SESSION_SECRET || "change-me-please";
-
-// IMPORTANT: trust Render's proxy so 'secure' cookies work over HTTPS
-if (process.env.NODE_ENV === "production") {
-    app.set("trust proxy", 1);
-}
-
 app.use(
     session({
         secret: sessionSecret,
         resave: false,
         saveUninitialized: false,
         cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 7,                 // 7 days
-            secure: process.env.NODE_ENV === "production",   // HTTPS-only in prod
-            sameSite: "lax"
+            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
         },
         store: MongoStore.create({
             mongoUrl: process.env.MONGO_URI,
-            ttl: 60 * 60 * 24 * 14 // 14 days
-        })
+            ttl: 60 * 60 * 24 * 14, // 14 days
+        }),
     })
 );
 
@@ -169,52 +162,42 @@ passport.deserializeUser(async (id, done) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Expose admin + flash (non-breaking defaults) to all views
+// Expose admin flag + flash helpers
 app.use((req, res, next) => {
     res.locals.isAdmin = !!req.user;
-    res.locals.flash = req.session.flash || null;
-    delete req.session.flash;
+    res.flash = (type, text) => {
+        res.locals.flash = { type, text };
+    };
     next();
 });
 
-function setFlash(req, type, text) {
-    req.session.flash = { type, text };
-}
-
-// Require login for admin routes
+// Auth guard
 function ensureAuth(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) return next();
     res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
 }
 
-// ------------------------------------------------------------------
 // Core pages
-// ------------------------------------------------------------------
 app.get("/", (req, res) => res.render("home", { title: "Home" }));
 app.get("/about", (req, res) => res.render("about", { title: "About" }));
 app.get("/projects", (req, res) => res.render("projects", { title: "Projects" }));
 
-// Contact (demo)
 app.get("/contact", (req, res) =>
     res.render("contact", { title: "Contact", sent: req.query.sent === "1" })
 );
 app.post("/contact", (req, res) => {
     const { email, message } = req.body;
-    if (!email || !message) return res.status(400).send("Email and message are required.");
+    if (!email || !message)
+        return res.status(400).send("Email and message are required.");
     console.log("📩 Contact form:", { email, message });
     res.redirect("/contact?sent=1");
 });
 
-// ------------------------------------------------------------------
-// Auth pages
-// ------------------------------------------------------------------
+// Auth routes
 app.get("/login", (req, res) => {
-    res.render("login", {
-        title: "Login",
-        error: req.query.err ? "Invalid email or password." : null
-    });
+    const err = req.query.err ? "Invalid email or password." : null;
+    res.render("login", { title: "Login", error: err });
 });
-
 app.post(
     "/login",
     (req, res, next) => {
@@ -224,87 +207,124 @@ app.post(
     passport.authenticate("local", { failureRedirect: "/login?err=1" }),
     (req, res) => res.redirect(req._nextUrl || "/blog")
 );
-
 app.post("/logout", (req, res, next) => {
-    req.logout(err => {
+    req.logout((err) => {
         if (err) return next(err);
         res.redirect("/blog");
     });
 });
 
-// Admin landing (simple)
-app.get("/admin", ensureAuth, (req, res) => {
-    res.render("admin", { title: "Admin" });
-});
-
-// Change password
-app.get("/change-password", ensureAuth, (req, res) => {
+// Change password (for logged-in admins)
+app.get("/account/password", ensureAuth, (req, res) => {
     res.render("change-password", { title: "Change Password" });
 });
-app.post("/change-password", ensureAuth, async (req, res) => {
-    const { currentPassword, newPassword, confirmPassword } = req.body;
+app.post("/account/password", ensureAuth, async (req, res) => {
     try {
+        const { currentPassword, newPassword, confirmPassword } = req.body;
         if (!currentPassword || !newPassword || !confirmPassword) {
-            setFlash(req, "warning", "All fields are required.");
-            return res.redirect("/change-password");
+            res.flash("warning", "Please fill in all fields.");
+            return res.redirect("/account/password");
         }
         if (newPassword !== confirmPassword) {
-            setFlash(req, "warning", "New passwords do not match.");
-            return res.redirect("/change-password");
+            res.flash("warning", "New passwords do not match.");
+            return res.redirect("/account/password");
         }
+
         const user = await User.findById(req.user._id);
+        if (!user) {
+            res.flash("danger", "User not found.");
+            return res.redirect("/account/password");
+        }
+
         const ok = await bcrypt.compare(currentPassword, user.passwordHash);
         if (!ok) {
-            setFlash(req, "danger", "Current password is incorrect.");
-            return res.redirect("/change-password");
+            res.flash("danger", "Current password is incorrect.");
+            return res.redirect("/account/password");
         }
+
         user.passwordHash = await bcrypt.hash(newPassword, 12);
         await user.save();
-        setFlash(req, "success", "Password updated.");
+
+        res.flash("success", "Password updated successfully.");
         res.redirect("/blog");
     } catch (e) {
-        console.error("change-password error:", e);
-        setFlash(req, "danger", "Something went wrong.");
-        res.redirect("/change-password");
+        console.error("💥 change-password:", e);
+        res.flash("danger", "Something went wrong.");
+        res.redirect("/account/password");
     }
 });
 
-// ------------------------------------------------------------------
-// Blog (public + admin views)
-// ------------------------------------------------------------------
-
-// List posts
+// BLOG — list (search + pagination)
 app.get("/blog", async (req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
 
-        const filter = req.user ? {} : { published: true };
-        const posts = await Post.find(filter).sort({ createdAt: -1 }).lean();
+        const isAdmin = !!req.user;
+        const q = (req.query.q || "").trim();
+        const page = Math.max(parseInt(req.query.page || "1", 10), 1);
+        const perPage = 5;
+
+        // Base filter: public sees only published; admin sees all
+        const filter = isAdmin ? {} : { published: true };
+
+        // Simple regex search on title/body
+        if (q) {
+            const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            filter.$or = [{ title: rx }, { body: rx }];
+        }
+
+        const [total, posts] = await Promise.all([
+            Post.countDocuments(filter),
+            Post.find(filter)
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * perPage)
+                .limit(perPage)
+                .lean(),
+        ]);
+
+        const totalPages = Math.max(Math.ceil(total / perPage), 1);
 
         res.locals.meta = {
             ...res.locals.meta,
             title: `Blog • ${app.locals.site.name}`,
-            description: "Notes from my learning-in-public journey.",
+            description: q
+                ? `Search results for “${q}”.`
+                : "Notes from my learning-in-public journey.",
             type: "website",
-            url: absUrl(req, "/blog"),
-            canonical: absUrl(req, "/blog")
+            url: absUrl(
+                req,
+                `/blog${req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : ""}`
+            ),
+            canonical: absUrl(req, "/blog"),
         };
 
-        res.render("blog", { title: "Blog", posts, isAdmin: !!req.user });
+        res.render("blog", {
+            title: "Blog",
+            posts,
+            isAdmin,
+            q,
+            page,
+            totalPages,
+            total,
+            perPage,
+        });
     } catch (err) {
         console.error("💥 /blog error:", err);
         res.status(500).send("Blog failed: " + (err?.message || "unknown"));
     }
 });
 
-// Single post
+// BLOG — single post
 app.get("/blog/:slug", async (req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
-
         const post = await Post.findOne({ slug: req.params.slug }).lean();
         if (!post) return res.status(404).send("Post not found");
-        if (!post.published && !req.user) return res.status(404).send("Post not found");
+
+        // If not admin, block drafts
+        if (!req.user && post.published === false) {
+            return res.status(404).send("Post not found");
+        }
 
         const html = post.bodyHtml || mdToHtml(post.body || "");
         const desc = summarize(html, 180);
@@ -316,7 +336,7 @@ app.get("/blog/:slug", async (req, res) => {
             type: "article",
             url: absUrl(req, `/blog/${post.slug}`),
             canonical: absUrl(req, `/blog/${post.slug}`),
-            image: post.coverImage || absUrl(req, "/img/share-default.jpg")
+            image: post.coverImage || absUrl(req, "/img/share-default.jpg"),
         };
 
         res.render("post", { title: post.title, post, html, isAdmin: !!req.user });
@@ -326,15 +346,15 @@ app.get("/blog/:slug", async (req, res) => {
     }
 });
 
-// Admin: New post
+// BLOG ADMIN — new/create
 app.get("/admin/blog/new", ensureAuth, (_req, res) => {
     res.render("new-post", { title: "New Post" });
 });
-
 app.post("/admin/blog", ensureAuth, async (req, res) => {
     try {
         const { title, body, coverImage } = req.body;
         const published = req.body.published === "on";
+
         if (!title || !body) return res.status(400).send("Title and body are required.");
 
         const slug = slugify(title, { lower: true, strict: true });
@@ -348,7 +368,7 @@ app.post("/admin/blog", ensureAuth, async (req, res) => {
             body,
             bodyHtml: html,
             coverImage: coverImage || null,
-            published
+            published,
         });
 
         res.redirect(`/blog/${slug}`);
@@ -358,7 +378,7 @@ app.post("/admin/blog", ensureAuth, async (req, res) => {
     }
 });
 
-// Admin: Edit post
+// BLOG ADMIN — edit/update
 app.get("/admin/blog/:slug/edit", ensureAuth, async (req, res) => {
     try {
         const post = await Post.findOne({ slug: req.params.slug }).lean();
@@ -369,12 +389,11 @@ app.get("/admin/blog/:slug/edit", ensureAuth, async (req, res) => {
         res.status(500).send("Failed to load edit page.");
     }
 });
-
-// Admin: Update post
 app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
     try {
         const { title, body, coverImage } = req.body;
         const published = req.body.published === "on";
+
         if (!title || !body) return res.status(400).send("Title and body are required.");
 
         const current = await Post.findOne({ slug: req.params.slug });
@@ -401,7 +420,7 @@ app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
     }
 });
 
-// Admin: Delete post
+// BLOG ADMIN — delete
 app.post("/admin/blog/:slug/delete", ensureAuth, async (req, res) => {
     try {
         await Post.deleteOne({ slug: req.params.slug });
@@ -412,18 +431,19 @@ app.post("/admin/blog/:slug/delete", ensureAuth, async (req, res) => {
     }
 });
 
-// ------------------------------------------------------------------
 // SEO + diagnostics
-// ------------------------------------------------------------------
 app.get("/sitemap.xml", async (req, res) => {
     try {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
         const staticUrls = ["/", "/projects", "/about", "/contact", "/blog"]
-            .map(u => `  <url><loc>${base}${u}</loc><changefreq>weekly</changefreq></url>`)
+            .map((u) => `  <url><loc>${base}${u}</loc><changefreq>weekly</changefreq></url>`)
             .join("\n");
         const posts = await Post.find({ published: true }).sort({ createdAt: -1 }).lean();
         const postUrls = posts
-            .map(p => `  <url><loc>${base}/blog/${p.slug}</loc><changefreq>weekly</changefreq></url>`)
+            .map(
+                (p) =>
+                    `  <url><loc>${base}/blog/${p.slug}</loc><changefreq>weekly</changefreq></url>`
+            )
             .join("\n");
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -441,10 +461,11 @@ app.get("/rss.xml", async (req, res) => {
     try {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
         const posts = await Post.find({ published: true }).sort({ createdAt: -1 }).lean();
-        const items = posts.map(p => {
-            const html = p.bodyHtml || mdToHtml(p.body || "");
-            const desc = summarize(html, 200);
-            return `
+        const items = posts
+            .map((p) => {
+                const html = p.bodyHtml || mdToHtml(p.body || "");
+                const desc = summarize(html, 200);
+                return `
   <item>
     <title><![CDATA[${p.title}]]></title>
     <link>${base}/blog/${p.slug}</link>
@@ -452,7 +473,8 @@ app.get("/rss.xml", async (req, res) => {
     <pubDate>${new Date(p.createdAt).toUTCString()}</pubDate>
     <description><![CDATA[${desc}]]></description>
   </item>`;
-        }).join("\n");
+            })
+            .join("\n");
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
 <channel>
@@ -469,12 +491,12 @@ app.get("/rss.xml", async (req, res) => {
     }
 });
 
-// Quick diag + seed + health
+// Diagnostics + dev helpers
 app.get("/diag", (_req, res) => {
     const hasEnv = Boolean(process.env.MONGO_URI);
-    const readyState = mongoose.connection?.readyState; // 0..3
+    const readyState = mongoose.connection?.readyState;
     const host = mongoose.connection?.host;
-    res.json({ hasEnv, readyState, host, nodeEnv: process.env.NODE_ENV });
+    res.json({ hasEnv, readyState, host, user: !!_req.user });
 });
 
 app.get("/dev/seed", async (_req, res) => {
@@ -486,15 +508,17 @@ app.get("/dev/seed", async (_req, res) => {
                 {
                     title: "Hello World",
                     slug: "hello-world",
-                    body: "My first post from the bootcamp project! This site uses Node.js, Express, EJS, and MongoDB.",
-                    published: true
+                    body:
+                        "My first post from the bootcamp project! This site uses Node.js, Express, EJS, and MongoDB.",
+                    published: true,
                 },
                 {
                     title: "Learning Full-Stack",
                     slug: "learning-full-stack",
-                    body: "Building while studying is the fastest way to learn. Next up: auth with Passport and an admin panel.",
-                    published: true
-                }
+                    body:
+                        "Building while studying is the fastest way to learn. Next up: auth with Passport and an admin panel.",
+                    published: true,
+                },
             ]);
         }
         res.send("Seeded (or already seeded).");
@@ -507,7 +531,5 @@ app.get("/dev/seed", async (_req, res) => {
 app.get("/health", (_req, res) => res.send("ok"));
 app.use((_req, res) => res.status(404).send("Not Found"));
 
-// ------------------------------------------------------------------
 // Start server
-// ------------------------------------------------------------------
 app.listen(PORT, () => console.log(`🚀 http://localhost:${PORT}`));

@@ -383,3 +383,134 @@ footer a {
         padding: 2.75rem;
     }
 }
+
+/* ===== Blog list layout ===== */
+.list-group-item {
+    padding: 1rem 1.25rem;
+    border: 1px solid #e9ecef;
+    border-radius: .5rem;
+    margin-bottom: 1rem;
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+
+.list-group-item:hover {
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+/* Thumbnail image fixed ratio */
+.list-group-item img {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    border-radius: .5rem;
+    display: block;
+}
+
+/* Title alignment */
+.list-group-item h2 {
+    margin-bottom: .25rem;
+    font-weight: 700;
+}
+
+.list-group-item h2 a {
+    color: #212529;
+    text-decoration: none;
+}
+
+.list-group-item h2 a:hover {
+    color: var(--accent);
+}
+
+/* Read more + admin buttons */
+.list-group-item .btn {
+    font-size: .8rem;
+    padding: .25rem .75rem;
+}
+
+/* Pagination spacing */
+.pagination .page-link {
+    font-weight: 600;
+    padding: .5rem .85rem;
+}
+
+/* ===== Single post typography ===== */
+.blog-post .post-body {
+    line-height: 1.8;
+}
+
+.blog-post .post-body p {
+    margin-bottom: 1.1rem;
+}
+
+.blog-post .post-body h2,
+.blog-post .post-body h3,
+.blog-post .post-body h4 {
+    margin-top: 1.6rem;
+    margin-bottom: .6rem;
+    font-weight: 800;
+}
+
+.blog-post .post-body blockquote {
+    padding: .75rem 1rem;
+    margin: 1rem 0;
+    background: #f8f9fa;
+    border-left: 4px solid var(--accent, #0d6efd);
+    border-radius: .25rem;
+}
+
+.blog-post .post-body pre {
+    background: #1f2328;
+    color: #e9ecef;
+    padding: .9rem 1rem;
+    border-radius: .5rem;
+    overflow-x: auto;
+    font-size: .95rem;
+}
+
+.blog-post .post-body code:not(pre code) {
+    background: #f1f3f5;
+    padding: .1rem .35rem;
+    border-radius: .25rem;
+}
+
+/* Cover image polish */
+.post-cover img {
+    display: block;
+}
+
+/* Post actions bar (you already have base styles; keep enhancing) */
+.post-actions {
+    background: #1f2429;
+    border-radius: .5rem;
+    padding: .75rem;
+}
+
+.post-actions .btn {
+    border-width: 2px;
+    font-weight: 600;
+}
+
+.post-actions .btn-edit {
+    background: #f0ad4e;
+    color: #1f2429;
+    border-color: #f0ad4e;
+}
+
+.post-actions .btn-edit:hover {
+    background: #ec971f;
+    border-color: #ec971f;
+}
+
+/* Admin editor polish */
+.form-control-lg {
+    font-weight: 600;
+}
+
+.ratio-16x9 {
+    aspect-ratio: 16 / 9;
+}
+
+.card .form-text {
+    color: #6c757d;
+}
