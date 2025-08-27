@@ -1,5 +1,4 @@
-// app.js — Express + EJS + Mongo + Markdown blog + Passport auth
-// Includes: login session, change-password, draft/publish, search, pagination
+// app.js — Express + EJS + Mongo + Markdown blog + Passport auth + Mailer
 
 import express from "express";
 import path from "path";
@@ -19,21 +18,47 @@ import bcrypt from "bcrypt";
 import MongoStore from "connect-mongo";
 import User from "./models/user.js";
 
+// Mail + rate limit
+import nodemailer from "nodemailer";
+import rateLimit from "express-rate-limit";
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Proper __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Views/static/body
+// ─────────────────────────────────────────────────────────────────────────────
+// Mongo settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Disable autoIndex in production to silence Atlas warnings & speed cold-starts
+if (process.env.NODE_ENV === "production") {
+    mongoose.set("autoIndex", false);
+}
+
+// Connect
+if (process.env.MONGO_URI) {
+    mongoose
+        .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000 })
+        .then(() => console.log("✅ MongoDB connected"))
+        .catch((err) => console.error("❌ Mongo error:", err.message));
+} else {
+    console.warn("⚠️ MONGO_URI not set; blog will be disabled.");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+/** Views/static/body */
+// ─────────────────────────────────────────────────────────────────────────────
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 
-// Site locals
+// Site locals for templates
 app.locals.site = {
     name: process.env.NAME || "YourName",
     role: process.env.ROLE || "",
@@ -44,14 +69,17 @@ app.locals.site = {
     cvUrl: process.env.CV_URL || "",
 };
 
-// Current path + default flash
+// Active nav + safe default flash for alerts partial
 app.use((req, res, next) => {
     res.locals.path = req.path;
-    if (typeof res.locals.flash === "undefined") res.locals.flash = null;
+    // keep alerts include safe even if nothing set
+    res.locals.flash = res.locals.flash || null;
     next();
 });
 
-// Markdown → safe HTML
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers: Markdown → safe HTML, absUrl, summarize, default meta
+// ─────────────────────────────────────────────────────────────────────────────
 function mdToHtml(md = "") {
     const raw = marked(md, { mangle: false, headerIds: true });
     return sanitizeHtml(raw, {
@@ -77,14 +105,19 @@ function mdToHtml(md = "") {
         },
     });
 }
+
 function absUrl(req, pathStr = "/") {
     const base =
         process.env.BASE_URL?.replace(/\/+$/, "") ||
         `${req.protocol}://${req.get("host")}`;
     return `${base}${pathStr.startsWith("/") ? pathStr : `/${pathStr}`}`;
 }
+
 function summarize(htmlOrMd = "", n = 160) {
-    const text = String(htmlOrMd).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    const text = String(htmlOrMd)
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
     return text.length > n ? text.slice(0, n - 1) + "…" : text;
 }
 
@@ -96,26 +129,16 @@ app.use((req, res, next) => {
         type: "website",
         url: absUrl(req, req.path),
         canonical: absUrl(req, req.path),
-        image: null,
+        image: null, // templates may override; html-start may fallback to /img/share-default.jpg
     };
     next();
 });
 
-// Mongoose (avoid index rebuild in prod)
-if (process.env.NODE_ENV === "production") {
-    mongoose.set("autoIndex", false);
-}
-if (process.env.MONGO_URI) {
-    mongoose
-        .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000 })
-        .then(() => console.log("✅ MongoDB connected"))
-        .catch((err) => console.error("❌ Mongo error:", err.message));
-} else {
-    console.warn("⚠️ MONGO_URI not set; blog will be disabled.");
-}
-
-// Sessions + Passport
+// ─────────────────────────────────────────────────────────────────────────────
+// Sessions + Passport (local strategy)
+// ─────────────────────────────────────────────────────────────────────────────
 const sessionSecret = process.env.SESSION_SECRET || "change-me-please";
+
 app.use(
     session({
         secret: sessionSecret,
@@ -149,6 +172,7 @@ passport.use(
         }
     )
 );
+
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {
     try {
@@ -162,42 +186,101 @@ passport.deserializeUser(async (id, done) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Expose admin flag + flash helpers
+// Expose admin flag to views
 app.use((req, res, next) => {
     res.locals.isAdmin = !!req.user;
-    res.flash = (type, text) => {
-        res.locals.flash = { type, text };
-    };
     next();
 });
 
-// Auth guard
+// Protect admin routes
 function ensureAuth(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) return next();
     res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Mailer + rate limit (Contact)
+// ─────────────────────────────────────────────────────────────────────────────
+const mailer = nodemailer.createTransport({
+    host: process.env.MAIL_HOST,
+    port: Number(process.env.MAIL_PORT || 587),
+    secure: false,
+    auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
+});
+
+const contactLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Core pages
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/", (req, res) => res.render("home", { title: "Home" }));
 app.get("/about", (req, res) => res.render("about", { title: "About" }));
 app.get("/projects", (req, res) => res.render("projects", { title: "Projects" }));
 
-app.get("/contact", (req, res) =>
-    res.render("contact", { title: "Contact", sent: req.query.sent === "1" })
-);
-app.post("/contact", (req, res) => {
-    const { email, message } = req.body;
-    if (!email || !message)
-        return res.status(400).send("Email and message are required.");
-    console.log("📩 Contact form:", { email, message });
-    res.redirect("/contact?sent=1");
+// Contact (email sending)
+app.get("/contact", (req, res) => {
+    res.render("contact", {
+        title: "Contact",
+        sent: req.query.sent === "1",
+        err: req.query.err || null,
+    });
 });
 
-// Auth routes
-app.get("/login", (req, res) => {
-    const err = req.query.err ? "Invalid email or password." : null;
-    res.render("login", { title: "Login", error: err });
+app.post("/contact", contactLimiter, async (req, res) => {
+    try {
+        const { email, message, name, website } = req.body;
+
+        // Honeypot field (hidden input named 'website') should be blank
+        if (website && website.trim() !== "") {
+            return res.redirect("/contact?sent=1"); // silently OK for bots
+        }
+
+        if (!email || !message) {
+            return res.redirect("/contact?err=missing");
+        }
+        if (message.length > 5000) {
+            return res.redirect("/contact?err=toolong");
+        }
+
+        const escaped = (s = "") =>
+            s.replace(/[<>&]/g, (ch) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[ch]));
+
+        const html = `
+      <h2>New contact message</h2>
+      <p><strong>From:</strong> ${name ? escaped(name) + " — " : ""}${escaped(email)}</p>
+      <p><strong>Time:</strong> ${new Date().toUTCString()}</p>
+      <hr/>
+      <pre style="white-space:pre-wrap;font:inherit">${escaped(message)}</pre>
+    `;
+
+        await mailer.sendMail({
+            from: process.env.MAIL_FROM,
+            to: process.env.MAIL_TO || app.locals.site.email || "owner@example.com",
+            subject: `Contact form: ${name || email}`,
+            replyTo: email,
+            html,
+        });
+
+        return res.redirect("/contact?sent=1");
+    } catch (e) {
+        console.error("📮 contact error:", e);
+        return res.redirect("/contact?err=send");
+    }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth pages
+// ─────────────────────────────────────────────────────────────────────────────
+app.get("/login", (req, res) => {
+    res.render("login", {
+        title: "Login",
+        error: req.query.err ? "Invalid email or password." : null,
+    });
+});
+
 app.post(
     "/login",
     (req, res, next) => {
@@ -207,6 +290,7 @@ app.post(
     passport.authenticate("local", { failureRedirect: "/login?err=1" }),
     (req, res) => res.redirect(req._nextUrl || "/blog")
 );
+
 app.post("/logout", (req, res, next) => {
     req.logout((err) => {
         if (err) return next(err);
@@ -214,117 +298,35 @@ app.post("/logout", (req, res, next) => {
     });
 });
 
-// Change password (for logged-in admins)
-app.get("/account/password", ensureAuth, (req, res) => {
-    res.render("change-password", { title: "Change Password" });
-});
-app.post("/account/password", ensureAuth, async (req, res) => {
-    try {
-        const { currentPassword, newPassword, confirmPassword } = req.body;
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            res.flash("warning", "Please fill in all fields.");
-            return res.redirect("/account/password");
-        }
-        if (newPassword !== confirmPassword) {
-            res.flash("warning", "New passwords do not match.");
-            return res.redirect("/account/password");
-        }
-
-        const user = await User.findById(req.user._id);
-        if (!user) {
-            res.flash("danger", "User not found.");
-            return res.redirect("/account/password");
-        }
-
-        const ok = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!ok) {
-            res.flash("danger", "Current password is incorrect.");
-            return res.redirect("/account/password");
-        }
-
-        user.passwordHash = await bcrypt.hash(newPassword, 12);
-        await user.save();
-
-        res.flash("success", "Password updated successfully.");
-        res.redirect("/blog");
-    } catch (e) {
-        console.error("💥 change-password:", e);
-        res.flash("danger", "Something went wrong.");
-        res.redirect("/account/password");
-    }
-});
-
-// BLOG — list (search + pagination)
+// ─────────────────────────────────────────────────────────────────────────────
+// Blog (public)
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/blog", async (req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
-
-        const isAdmin = !!req.user;
-        const q = (req.query.q || "").trim();
-        const page = Math.max(parseInt(req.query.page || "1", 10), 1);
-        const perPage = 5;
-
-        // Base filter: public sees only published; admin sees all
-        const filter = isAdmin ? {} : { published: true };
-
-        // Simple regex search on title/body
-        if (q) {
-            const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-            filter.$or = [{ title: rx }, { body: rx }];
-        }
-
-        const [total, posts] = await Promise.all([
-            Post.countDocuments(filter),
-            Post.find(filter)
-                .sort({ createdAt: -1 })
-                .skip((page - 1) * perPage)
-                .limit(perPage)
-                .lean(),
-        ]);
-
-        const totalPages = Math.max(Math.ceil(total / perPage), 1);
+        const posts = await Post.find().sort({ createdAt: -1 }).lean();
 
         res.locals.meta = {
             ...res.locals.meta,
             title: `Blog • ${app.locals.site.name}`,
-            description: q
-                ? `Search results for “${q}”.`
-                : "Notes from my learning-in-public journey.",
+            description: "Notes from my learning-in-public journey.",
             type: "website",
-            url: absUrl(
-                req,
-                `/blog${req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : ""}`
-            ),
+            url: absUrl(req, "/blog"),
             canonical: absUrl(req, "/blog"),
         };
 
-        res.render("blog", {
-            title: "Blog",
-            posts,
-            isAdmin,
-            q,
-            page,
-            totalPages,
-            total,
-            perPage,
-        });
+        res.render("blog", { title: "Blog", posts, isAdmin: !!req.user });
     } catch (err) {
         console.error("💥 /blog error:", err);
         res.status(500).send("Blog failed: " + (err?.message || "unknown"));
     }
 });
 
-// BLOG — single post
 app.get("/blog/:slug", async (req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
         const post = await Post.findOne({ slug: req.params.slug }).lean();
         if (!post) return res.status(404).send("Post not found");
-
-        // If not admin, block drafts
-        if (!req.user && post.published === false) {
-            return res.status(404).send("Post not found");
-        }
 
         const html = post.bodyHtml || mdToHtml(post.body || "");
         const desc = summarize(html, 180);
@@ -346,21 +348,20 @@ app.get("/blog/:slug", async (req, res) => {
     }
 });
 
-// BLOG ADMIN — new/create
+// ─────────────────────────────────────────────────────────────────────────────
+// Blog admin (protected)
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/admin/blog/new", ensureAuth, (_req, res) => {
     res.render("new-post", { title: "New Post" });
 });
+
 app.post("/admin/blog", ensureAuth, async (req, res) => {
     try {
         const { title, body, coverImage } = req.body;
-        const published = req.body.published === "on";
-
         if (!title || !body) return res.status(400).send("Title and body are required.");
-
         const slug = slugify(title, { lower: true, strict: true });
         const existing = await Post.findOne({ slug }).lean();
         if (existing) return res.status(409).send("A post with this title already exists.");
-
         const html = mdToHtml(body);
         await Post.create({
             title,
@@ -368,9 +369,7 @@ app.post("/admin/blog", ensureAuth, async (req, res) => {
             body,
             bodyHtml: html,
             coverImage: coverImage || null,
-            published,
         });
-
         res.redirect(`/blog/${slug}`);
     } catch (err) {
         console.error("💥 create post error:", err);
@@ -378,7 +377,6 @@ app.post("/admin/blog", ensureAuth, async (req, res) => {
     }
 });
 
-// BLOG ADMIN — edit/update
 app.get("/admin/blog/:slug/edit", ensureAuth, async (req, res) => {
     try {
         const post = await Post.findOne({ slug: req.params.slug }).lean();
@@ -389,11 +387,10 @@ app.get("/admin/blog/:slug/edit", ensureAuth, async (req, res) => {
         res.status(500).send("Failed to load edit page.");
     }
 });
+
 app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
     try {
         const { title, body, coverImage } = req.body;
-        const published = req.body.published === "on";
-
         if (!title || !body) return res.status(400).send("Title and body are required.");
 
         const current = await Post.findOne({ slug: req.params.slug });
@@ -410,7 +407,6 @@ app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
         current.body = body;
         current.bodyHtml = mdToHtml(body);
         current.coverImage = coverImage || null;
-        current.published = published;
 
         await current.save();
         res.redirect(`/blog/${current.slug}`);
@@ -420,7 +416,6 @@ app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
     }
 });
 
-// BLOG ADMIN — delete
 app.post("/admin/blog/:slug/delete", ensureAuth, async (req, res) => {
     try {
         await Post.deleteOne({ slug: req.params.slug });
@@ -431,19 +426,19 @@ app.post("/admin/blog/:slug/delete", ensureAuth, async (req, res) => {
     }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
 // SEO + diagnostics
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/sitemap.xml", async (req, res) => {
     try {
-        const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+        const base =
+            (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
         const staticUrls = ["/", "/projects", "/about", "/contact", "/blog"]
             .map((u) => `  <url><loc>${base}${u}</loc><changefreq>weekly</changefreq></url>`)
             .join("\n");
-        const posts = await Post.find({ published: true }).sort({ createdAt: -1 }).lean();
+        const posts = await Post.find().sort({ createdAt: -1 }).lean();
         const postUrls = posts
-            .map(
-                (p) =>
-                    `  <url><loc>${base}/blog/${p.slug}</loc><changefreq>weekly</changefreq></url>`
-            )
+            .map((p) => `  <url><loc>${base}/blog/${p.slug}</loc><changefreq>weekly</changefreq></url>`)
             .join("\n");
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -459,8 +454,9 @@ ${postUrls}
 
 app.get("/rss.xml", async (req, res) => {
     try {
-        const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
-        const posts = await Post.find({ published: true }).sort({ createdAt: -1 }).lean();
+        const base =
+            (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+        const posts = await Post.find().sort({ createdAt: -1 }).lean();
         const items = posts
             .map((p) => {
                 const html = p.bodyHtml || mdToHtml(p.body || "");
@@ -491,12 +487,12 @@ app.get("/rss.xml", async (req, res) => {
     }
 });
 
-// Diagnostics + dev helpers
+// Simple diagnostics
 app.get("/diag", (_req, res) => {
     const hasEnv = Boolean(process.env.MONGO_URI);
-    const readyState = mongoose.connection?.readyState;
+    const readyState = mongoose.connection?.readyState; // 0=down,1=up,2=connecting,3=disconnecting
     const host = mongoose.connection?.host;
-    res.json({ hasEnv, readyState, host, user: !!_req.user });
+    res.json({ hasEnv, readyState, host });
 });
 
 app.get("/dev/seed", async (_req, res) => {
@@ -510,14 +506,12 @@ app.get("/dev/seed", async (_req, res) => {
                     slug: "hello-world",
                     body:
                         "My first post from the bootcamp project! This site uses Node.js, Express, EJS, and MongoDB.",
-                    published: true,
                 },
                 {
                     title: "Learning Full-Stack",
                     slug: "learning-full-stack",
                     body:
                         "Building while studying is the fastest way to learn. Next up: auth with Passport and an admin panel.",
-                    published: true,
                 },
             ]);
         }
@@ -528,6 +522,7 @@ app.get("/dev/seed", async (_req, res) => {
     }
 });
 
+// Health & 404
 app.get("/health", (_req, res) => res.send("ok"));
 app.use((_req, res) => res.status(404).send("Not Found"));
 
