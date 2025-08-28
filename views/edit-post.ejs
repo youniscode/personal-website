@@ -1,103 +1,43 @@
-<%- include('partials/html-start', { title }) %>
+<%- include('partials/html-start', { title: 'Edit Post' }) %>
     <%- include('partials/header') %>
 
         <section class="section">
-            <div class="container" style="max-width: 900px;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h1 class="display-6 fw-bolder mb-0">Edit Post</h1>
-                    <a class="btn btn-outline-secondary btn-sm" href="/blog/<%= post.slug %>">View Post</a>
-                </div>
+            <div class="container">
+                <h1 class="mb-3">Edit Post</h1>
 
-                <form method="post" action="/admin/blog/<%= post.slug %>" class="card shadow-sm p-4">
-                    <!-- Title -->
+                <form method="post" action="/admin/blog/<%= post.slug %>">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Title</label>
-                        <input name="title" type="text" class="form-control form-control-lg" value="<%= post.title %>"
-                            required>
-                        <div class="form-text">Changing the title may change the slug (URL). We’ll handle conflicts
-                            safely.</div>
+                        <label class="form-label">Title *</label>
+                        <input type="text" class="form-control" name="title" value="<%= post.title %>" required>
                     </div>
 
-                    <!-- Cover image -->
-                    <div class="row g-3 align-items-center mb-3">
-                        <div class="col-md-8">
-                            <label class="form-label fw-semibold">Cover Image URL</label>
-                            <input id="coverImage" name="coverImage" type="url" class="form-control"
-                                value="<%= post.coverImage || '' %>" placeholder="https://…/image.jpg">
-                            <div class="form-text">Used in the blog list, post header, and social previews.</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div
-                                class="ratio ratio-16x9 border rounded d-flex align-items-center justify-content-center bg-light">
-                                <img id="coverPreview" alt="Cover preview"
-                                    style="max-width:100%; max-height:100%; object-fit:cover; <%= post.coverImage ? '' : 'display:none;' %>"
-                                    <%=post.coverImage ? `src="${post.coverImage}" ` : '' %>>
-                                <span id="coverEmpty" class="text-muted small"
-                                    style="<%= post.coverImage ? 'display:none;' : '' %>">Preview appears here</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Publish toggle -->
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" role="switch" id="published" name="published"
-                            <%=post.published !==false ? 'checked' : '' %>>
-                        <label class="form-check-label" for="published">Published</label>
-                    </div>
-
-                    <!-- Body -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Body (Markdown)</label>
-                        <textarea id="postBody" name="body" rows="14" class="form-control"
-                            required><%= post.body || '' %></textarea>
+                        <label class="form-label">Cover Image URL</label>
+                        <input type="url" class="form-control" name="coverImage" value="<%= post.coverImage || '' %>">
                     </div>
 
-                    <!-- Actions -->
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary" type="submit">Save Changes</button>
-                        <a class="btn btn-outline-secondary" href="/blog/<%= post.slug %>">Cancel</a>
-                        <form method="post" action="/admin/blog/<%= post.slug %>/delete" class="ms-auto"
-                            onsubmit="return confirm('Delete “<%= post.title %>”?');">
-                            <button class="btn btn-danger" type="submit">Delete</button>
-                        </form>
+                    <div class="mb-3">
+                        <label class="form-label">Tags</label>
+                        <input type="text" class="form-control" name="tags" value="<%= (post.tags || []).join(', ') %>"
+                            placeholder="node, express, ejs">
+                        <div class="form-text">Comma-separated, all lowercase recommended.</div>
                     </div>
+
+                    <div class="mb-3 form-check">
+                        <input class="form-check-input" type="checkbox" id="isPublished" name="isPublished"
+                            <%=post.isPublished ? 'checked' : '' %>>
+                        <label class="form-check-label" for="isPublished">Published</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Body (Markdown) *</label>
+                        <textarea class="form-control" name="body" rows="14" required><%= post.body %></textarea>
+                    </div>
+
+                    <button class="btn btn-dark" type="submit">Save changes</button>
+                    <a class="btn btn-outline-secondary" href="/blog/<%= post.slug %>">Cancel</a>
                 </form>
             </div>
         </section>
 
-        <%- include('partials/footer') %>
-
-            <!-- SimpleMDE -->
-            <link rel="stylesheet" href="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.css">
-            <script src="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.js"></script>
-            <script>
-                // Markdown editor
-                const mde = new SimpleMDE({
-                    element: document.getElementById('postBody'),
-                    spellChecker: false,
-                    status: ['lines', 'words'],
-                    renderingConfig: { singleLineBreaks: false },
-                    forceSync: true
-                });
-
-                // Cover image live preview
-                const urlInput = document.getElementById('coverImage');
-                const img = document.getElementById('coverPreview');
-                const empty = document.getElementById('coverEmpty');
-
-                function updatePreview() {
-                    const val = urlInput.value.trim();
-                    if (!val) {
-                        img.style.display = 'none';
-                        empty.style.display = 'block';
-                        img.removeAttribute('src');
-                        return;
-                    }
-                    img.onload = () => { img.style.display = 'block'; empty.style.display = 'none'; };
-                    img.onerror = () => { img.style.display = 'none'; empty.style.display = 'block'; };
-                    img.src = val;
-                }
-                urlInput.addEventListener('input', updatePreview);
-            </script>
-
-            <%- include('partials/html-end') %>
+        <%- include('partials/html-end') %>
