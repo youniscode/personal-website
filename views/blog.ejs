@@ -3,121 +3,128 @@
 
         <section class="section">
             <div class="container">
-                <h1 class="mb-3">Blog</h1>
-                <p class="text-muted">Notes from my learning-in-public journey.</p>
 
-                <!-- Search + Filters -->
-                <form class="row g-2 align-items-center mb-4" method="get" action="/blog" role="search">
-                    <div class="col-md-6">
-                        <input class="form-control" type="search" name="q" placeholder="Search posts…"
-                            value="<%= q || '' %>" aria-label="Search posts" />
-                    </div>
-                    <div class="col-md-3">
-                        <input class="form-control" type="text" name="tag" placeholder="Filter by tag…"
-                            value="<%= tag || '' %>" aria-label="Tag filter">
-                    </div>
-                    <div class="col-md-2">
-                        <select class="form-select" name="status">
-                            <option value="" <%=!status ? 'selected' : '' %>>All</option>
-                            <option value="published" <%=status==='published' ? 'selected' : '' %>>Published</option>
-                            <option value="draft" <%=status==='draft' ? 'selected' : '' %>>Drafts</option>
-                        </select>
-                    </div>
-                    <div class="col-md-1 d-grid">
-                        <button class="btn btn-primary" type="submit">Go</button>
-                    </div>
-                </form>
+                <!-- Heading + quick actions -->
+                <div class="d-flex align-items-center mb-3">
+                    <h1 class="display-5 fw-bolder mb-0">Blog</h1>
 
-                <% if (posts.length===0) { %>
+                    <% if (isAdmin) { %>
+                        <a class="btn btn-outline-secondary btn-sm ms-3" href="/admin/blog/new">New Post</a>
+                        <% } %>
+
+                            <!-- Search -->
+                            <form class="d-flex ms-auto" method="get" action="/blog" role="search">
+                                <input class="form-control me-2" type="search" name="q" placeholder="Search posts…"
+                                    value="<%= q || '' %>" aria-label="Search posts">
+                                <% if (tag) { %><input type="hidden" name="tag" value="<%= tag %>">
+                                    <% } %>
+                                        <button class="btn btn-outline-secondary" type="submit">Search</button>
+                            </form>
+                </div>
+
+                <p class="text-muted">
+                    Notes from my learning-in-public journey.
+                    <% if (q) { %><span class="badge bg-secondary ms-2">search: "<%= q %>"</span>
+                        <% } %>
+                            <% if (tag) { %><span class="badge bg-primary ms-2">tag: <%= tag %></span>
+                                <% } %>
+                </p>
+
+                <% if (!posts || posts.length===0) { %>
                     <div class="alert alert-info">No posts found.</div>
-                    <% } %>
+                    <% } else { %>
 
-                        <% posts.forEach(p=> { %>
-                            <div class="card border-0 border-start border-4 mb-4">
-                                <div class="card-body">
-                                    <div class="row g-3 align-items-center">
-                                        <div class="col-auto">
-                                            <img src="<%= p.coverImage || '/img/blog/share-default.png' %>"
-                                                alt="<%= p.title %>"
-                                                style="width: 180px; height: 110px; object-fit: cover;"
-                                                class="rounded shadow-sm" />
+                        <!-- Post list with thumbnail previews -->
+                        <div class="vstack gap-3">
+                            <% posts.forEach(p=> {
+                                const thumb = p.coverImage || '/img/share-default.jpg';
+                                %>
+                                <article class="card shadow-sm border-0">
+                                    <div class="row g-0 align-items-stretch">
+                                        <!-- Thumbnail -->
+                                        <div class="col-12 col-md-3">
+                                            <a href="/blog/<%= p.slug %>" class="d-block h-100">
+                                                <img src="<%= thumb %>" alt="<%= p.title %>"
+                                                    class="img-fluid rounded-start"
+                                                    style="width:100%; height: 160px; object-fit: cover;">
+                                            </a>
                                         </div>
-                                        <div class="col">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <h5 class="mb-1"><a class="text-decoration-none"
-                                                        href="/blog/<%= p.slug %>">
-                                                        <%= p.title %>
-                                                    </a></h5>
-                                                <% if (!p.isPublished) { %>
-                                                    <span class="badge bg-secondary">Draft</span>
-                                                    <% } %>
-                                            </div>
 
-                                            <p class="text-muted mb-2">
-                                                <%= p.excerpt %>
-                                            </p>
-
-                                            <% if (p.tags?.length) { %>
-                                                <div class="small">
-                                                    <% p.tags.forEach(t=> { %>
-                                                        <a href="/blog?tag=<%= encodeURIComponent(t) %>"
-                                                            class="badge bg-light text-dark border me-1">
-                                                            <%= t %>
+                                        <!-- Text -->
+                                        <div class="col-12 col-md-9">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <h2 class="h5 card-title mb-1">
+                                                        <a href="/blog/<%= p.slug %>" class="text-decoration-none">
+                                                            <%= p.title %>
                                                         </a>
-                                                        <% }) %>
-                                                </div>
-                                                <% } %>
-
-                                                    <div class="d-flex align-items-center mt-2">
-                                                        <a class="btn btn-sm btn-outline-dark me-2"
-                                                            href="/blog/<%= p.slug %>">Read more</a>
-
-                                                        <% if (isAdmin) { %>
-                                                            <a class="btn btn-sm btn-warning me-2"
-                                                                href="/admin/blog/<%= p.slug %>/edit">Edit</a>
-                                                            <form action="/admin/blog/<%= p.slug %>/delete"
-                                                                method="post" class="d-inline"
-                                                                onsubmit="return confirm('Delete this post?');">
-                                                                <button class="btn btn-sm btn-danger"
-                                                                    type="submit">Delete</button>
-                                                            </form>
+                                                        <% if (p.published===false) { %>
+                                                            <span class="badge bg-warning text-dark ms-2">Draft</span>
                                                             <% } %>
-                                                                <span class="ms-auto text-muted small">
-                                                                    <%= new Date(p.createdAt).toLocaleDateString() %>
-                                                                </span>
+                                                    </h2>
+                                                    <small class="text-muted ms-3">
+                                                        <%= new Date(p.createdAt).toLocaleDateString() %>
+                                                    </small>
+                                                </div>
+
+                                                <% if (p.tags && p.tags.length) { %>
+                                                    <div class="mb-1">
+                                                        <% p.tags.forEach(t=> { %>
+                                                            <a class="badge rounded-pill text-bg-light me-1"
+                                                                href="/blog?tag=<%= encodeURIComponent(t) %>">
+                                                                <%= t %>
+                                                            </a>
+                                                            <% }) %>
                                                     </div>
+                                                    <% } %>
+
+                                                        <p class="card-text text-muted mb-2">
+                                                            <%= (p.body || "" ).slice(0, 150) %>
+                                                                <%= (p.body || "" ).length> 150 ? "…" : "" %>
+                                                        </p>
+
+                                                        <a class="btn btn-sm btn-outline-primary"
+                                                            href="/blog/<%= p.slug %>">Read more</a>
+                                                        <% if (isAdmin) { %>
+                                                            <a class="btn btn-sm btn-outline-secondary ms-2"
+                                                                href="/admin/blog/<%= p.slug %>/edit">Edit</a>
+                                                            <% } %>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                            <% }) %>
+                                </article>
+                                <% }) %>
+                        </div>
 
-                                <!-- Pagination -->
-                                <% if (totalPages> 1) { %>
-                                    <nav class="mt-4" aria-label="Blog pagination">
-                                        <ul class="pagination justify-content-center">
-                                            <li class="page-item <%= page <= 1 ? 'disabled' : '' %>">
+                        <!-- Pagination -->
+                        <% if (typeof totalPages !=='undefined' && totalPages> 1) { %>
+                            <nav class="mt-4" aria-label="Blog pagination">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item <%= page <= 1 ? 'disabled' : '' %>">
+                                        <a class="page-link"
+                                            href="/blog?<%= new URLSearchParams({ q: q || '', tag: tag || '', page: String(page-1) }).toString() %>">Prev</a>
+                                    </li>
+
+                                    <% for (let i=1; i <=totalPages; i++) { %>
+                                        <li class="page-item <%= page === i ? 'active' : '' %>">
+                                            <a class="page-link"
+                                                href="/blog?<%= new URLSearchParams({ q: q || '', tag: tag || '', page: String(i) }).toString() %>">
+                                                <%= i %>
+                                            </a>
+                                        </li>
+                                        <% } %>
+
+                                            <li class="page-item <%= page >= totalPages ? 'disabled' : '' %>">
                                                 <a class="page-link"
-                                                    href="/blog?<%= qs({q, tag, status, page: page-1}) %>">Prev</a>
+                                                    href="/blog?<%= new URLSearchParams({ q: q || '', tag: tag || '', page: String(page+1) }).toString() %>">Next</a>
                                             </li>
+                                </ul>
+                            </nav>
+                            <% } %>
 
-                                            <% for (let i=1; i <=totalPages; i++) { %>
-                                                <li class="page-item <%= i === page ? 'active' : '' %>">
-                                                    <a class="page-link"
-                                                        href="/blog?<%= qs({q, tag, status, page: i}) %>">
-                                                        <%= i %>
-                                                    </a>
-                                                </li>
-                                                <% } %>
-
-                                                    <li class="page-item <%= page >= totalPages ? 'disabled' : '' %>">
-                                                        <a class="page-link"
-                                                            href="/blog?<%= qs({q, tag, status, page: page+1}) %>">Next</a>
-                                                    </li>
-                                        </ul>
-                                    </nav>
-                                    <% } %>
+                                <% } %>
             </div>
         </section>
 
-        <%- include('partials/html-end') %>
+        <%- include('partials/footer') %>
+            <%- include('partials/html-end') %>

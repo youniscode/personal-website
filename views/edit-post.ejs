@@ -1,43 +1,66 @@
-<%- include('partials/html-start', { title: 'Edit Post' }) %>
+<%- include('partials/html-start', { title }) %>
     <%- include('partials/header') %>
 
         <section class="section">
-            <div class="container">
-                <h1 class="mb-3">Edit Post</h1>
+            <div class="container" style="max-width: 860px;">
+                <h1 class="display-6 fw-bolder mb-4">Edit: <%= post.title %>
+                </h1>
 
-                <form method="post" action="/admin/blog/<%= post.slug %>">
+                <form method="post" action="/admin/blog/<%= post.slug %>" class="card shadow-sm p-4">
                     <div class="mb-3">
-                        <label class="form-label">Title *</label>
-                        <input type="text" class="form-control" name="title" value="<%= post.title %>" required>
+                        <label class="form-label">Title</label>
+                        <input name="title" type="text" class="form-control" value="<%= post.title %>" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Cover Image URL</label>
-                        <input type="url" class="form-control" name="coverImage" value="<%= post.coverImage || '' %>">
+                        <label class="form-label">Cover image URL (optional)</label>
+                        <input name="coverImage" type="url" class="form-control" value="<%= post.coverImage || '' %>">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Tags</label>
-                        <input type="text" class="form-control" name="tags" value="<%= (post.tags || []).join(', ') %>"
-                            placeholder="node, express, ejs">
-                        <div class="form-text">Comma-separated, all lowercase recommended.</div>
-                    </div>
-
-                    <div class="mb-3 form-check">
-                        <input class="form-check-input" type="checkbox" id="isPublished" name="isPublished"
-                            <%=post.isPublished ? 'checked' : '' %>>
-                        <label class="form-check-label" for="isPublished">Published</label>
+                        <input name="tags" type="text" class="form-control" value="<%= (post.tags || []).join(', ') %>"
+                            placeholder="e.g. javascript node tutorials">
+                        <div class="form-text">Separate by comma or space.</div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Body (Markdown) *</label>
-                        <textarea class="form-control" name="body" rows="14" required><%= post.body %></textarea>
+                        <label class="form-label">Body (Markdown)</label>
+                        <textarea id="postBody" name="body" rows="12" class="form-control"
+                            required><%= post.body %></textarea>
                     </div>
 
-                    <button class="btn btn-dark" type="submit">Save changes</button>
-                    <a class="btn btn-outline-secondary" href="/blog/<%= post.slug %>">Cancel</a>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="published" name="published"
+                            <%=post.published !==false ? 'checked' : '' %>>
+                        <label class="form-check-label" for="published">Published</label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" type="submit">Save Changes</button>
+                        <a class="btn btn-outline-secondary" href="/blog/<%= post.slug %>">Cancel</a>
+
+                        <form method="post" action="/admin/blog/<%= post.slug %>/delete"
+                            onsubmit="return confirm('Delete “<%= post.title %>”?');" class="ms-auto">
+                            <button class="btn btn-danger" type="submit">Delete</button>
+                        </form>
+                    </div>
                 </form>
             </div>
         </section>
 
-        <%- include('partials/html-end') %>
+        <%- include('partials/footer') %>
+
+            <link rel="stylesheet" href="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.css">
+            <script src="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.js"></script>
+            <script>
+                const mde = new SimpleMDE({
+                    element: document.getElementById('postBody'),
+                    spellChecker: false,
+                    status: false,
+                    renderingConfig: { singleLineBreaks: false },
+                    forceSync: true
+                });
+            </script>
+
+            <%- include('partials/html-end') %>

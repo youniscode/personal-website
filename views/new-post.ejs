@@ -1,56 +1,42 @@
-<%- include('partials/html-start', { title: 'New Post' }) %>
+<%- include('partials/html-start', { title }) %>
     <%- include('partials/header') %>
 
         <section class="section">
-            <div class="container" style="max-width: 900px;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h1 class="display-6 fw-bolder mb-0">New Post</h1>
-                    <a class="btn btn-outline-secondary btn-sm" href="/blog">Back to Blog</a>
-                </div>
+            <div class="container" style="max-width: 860px;">
+                <h1 class="display-6 fw-bolder mb-4">New Post</h1>
 
                 <form method="post" action="/admin/blog" class="card shadow-sm p-4">
-                    <!-- Title -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Title</label>
-                        <input name="title" type="text" class="form-control form-control-lg" placeholder="Post title…"
-                            required>
-                        <div class="form-text">The URL (slug) is generated from this title.</div>
+                        <label class="form-label">Title</label>
+                        <input name="title" type="text" class="form-control" placeholder="Post title..." required>
+                        <div class="form-text">Slug is generated from the title.</div>
                     </div>
 
-                    <!-- Cover image -->
-                    <div class="row g-3 align-items-center mb-3">
-                        <div class="col-md-8">
-                            <label class="form-label fw-semibold">Cover Image URL (optional)</label>
-                            <input id="coverImage" name="coverImage" type="url" class="form-control"
-                                placeholder="https://…/image.jpg">
-                            <div class="form-text">Used in the blog list, post header, and social previews.</div>
-                        </div>
-                        <div class="col-md-4">
-                            <div
-                                class="ratio ratio-16x9 border rounded d-flex align-items-center justify-content-center bg-light">
-                                <img id="coverPreview" alt="Cover preview"
-                                    style="max-width:100%; max-height:100%; object-fit:cover; display:none;">
-                                <span id="coverEmpty" class="text-muted small">Preview appears here</span>
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cover image URL (optional)</label>
+                        <input name="coverImage" type="url" class="form-control"
+                            placeholder="/img/blog/my-cover.jpg or https://…">
                     </div>
 
-                    <!-- Publish toggle -->
+                    <div class="mb-3">
+                        <label class="form-label">Tags</label>
+                        <input name="tags" type="text" class="form-control"
+                            placeholder="e.g. javascript, node, tutorials">
+                        <div class="form-text">Separate by comma or space.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Body (Markdown)</label>
+                        <textarea id="postBody" name="body" rows="12" class="form-control"
+                            placeholder="Write your post in Markdown..." required></textarea>
+                    </div>
+
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" role="switch" id="published" name="published"
                             checked>
-                        <label class="form-check-label" for="published">Publish immediately</label>
+                        <label class="form-check-label" for="published">Published</label>
                     </div>
 
-                    <!-- Body (Markdown) -->
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Body (Markdown)</label>
-                        <textarea id="postBody" name="body" rows="14" class="form-control"
-                            placeholder="Write your post in Markdown…" required></textarea>
-                        <div class="form-text">Supports Markdown. Use the Preview button to see the rendering.</div>
-                    </div>
-
-                    <!-- Actions -->
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary" type="submit">Publish</button>
                         <a class="btn btn-outline-secondary" href="/blog">Cancel</a>
@@ -61,37 +47,16 @@
 
         <%- include('partials/footer') %>
 
-            <!-- SimpleMDE -->
             <link rel="stylesheet" href="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.css">
             <script src="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.js"></script>
             <script>
-                // Markdown editor
                 const mde = new SimpleMDE({
                     element: document.getElementById('postBody'),
                     spellChecker: false,
-                    status: ['lines', 'words'],
+                    status: false,
                     renderingConfig: { singleLineBreaks: false },
                     forceSync: true
                 });
-
-                // Cover image live preview
-                const urlInput = document.getElementById('coverImage');
-                const img = document.getElementById('coverPreview');
-                const empty = document.getElementById('coverEmpty');
-
-                function updatePreview() {
-                    const val = urlInput.value.trim();
-                    if (!val) {
-                        img.style.display = 'none';
-                        empty.style.display = 'block';
-                        img.removeAttribute('src');
-                        return;
-                    }
-                    img.onload = () => { img.style.display = 'block'; empty.style.display = 'none'; };
-                    img.onerror = () => { img.style.display = 'none'; empty.style.display = 'block'; };
-                    img.src = val;
-                }
-                urlInput.addEventListener('input', updatePreview);
             </script>
 
             <%- include('partials/html-end') %>
