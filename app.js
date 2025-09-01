@@ -1,45 +1,42 @@
-// app.js — Personal site (Express + EJS + MongoDB + Passport + Nodemailer)
+// app.js — Personal site: Express + EJS + Mongo + Auth + Blog (tags/search/pagination) + Contact mail + SEO
 
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import Post from "./models/post.js";
-import User from "./models/user.js";
 import slugify from "slugify";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
+import bcrypt from "bcrypt";
 
-// Auth deps
+// Auth/session
 import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import bcrypt from "bcrypt";
 import MongoStore from "connect-mongo";
 
 // Mail
 import nodemailer from "nodemailer";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1) Env + app bootstrap
-// ─────────────────────────────────────────────────────────────────────────────
+// Models
+import Post from "./models/post.js";
+import User from "./models/user.js";
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const NODE_ENV = process.env.NODE_ENV || "development";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Views / static / body parsing
+// ---------- Views / static ----------
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 
-// Site data for templates
+// ---------- Site globals ----------
 app.locals.site = {
     name: process.env.NAME || "YourName",
     role: process.env.ROLE || "",
@@ -50,15 +47,13 @@ app.locals.site = {
     cvUrl: process.env.CV_URL || ""
 };
 
-// active nav helper
+// active path for nav
 app.use((req, res, next) => {
     res.locals.path = req.path;
     next();
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2) Helpers: Markdown → safe HTML, URLs, summary
-// ─────────────────────────────────────────────────────────────────────────────
+// ---------- Utils ----------
 function mdToHtml(md = "") {
     const raw = marked(md, { mangle: false, headerIds: true });
     return sanitizeHtml(raw, {
@@ -97,10 +92,10 @@ function summarize(htmlOrMd = "", n = 160) {
     return text.length > n ? text.slice(0, n - 1) + "…" : text;
 }
 
-// default SEO meta
+// ---------- Default SEO meta ----------
 app.use((req, res, next) => {
     res.locals.meta = {
-        title: res.locals.title || app.locals.site.name,
+        title: app.locals.site.name,
         description: app.locals.site.role || "",
         type: "website",
         url: absUrl(req, req.path),
@@ -110,11 +105,8 @@ app.use((req, res, next) => {
     next();
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3) MongoDB
-// ─────────────────────────────────────────────────────────────────────────────
-if (NODE_ENV === "production") {
-    // Prevent index rebuilds on startup
+// ---------- Mongo ----------
+if (process.env.NODE_ENV === "production") {
     mongoose.set("autoIndex", false);
 }
 
@@ -122,14 +114,12 @@ if (process.env.MONGO_URI) {
     mongoose
         .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000 })
         .then(() => console.log("✅ MongoDB connected"))
-        .catch(err => console.error("❌ Mongo error:", err.message));
+        .catch((err) => console.error("❌ Mongo error:", err.message));
 } else {
-    console.warn("⚠️ MONGO_URI not set; DB features will be disabled.");
+    console.warn("⚠️  MONGO_URI not set; DB features disabled.");
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 4) Sessions + Passport (local strategy)
-// ─────────────────────────────────────────────────────────────────────────────
+// ---------- Session + Passport ----------
 const sessionSecret = process.env.SESSION_SECRET || "change-me-please";
 
 app.use(
@@ -138,16 +128,14 @@ app.use(
         resave: false,
         saveUninitialized: false,
         cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-            secure: NODE_ENV === "production",
+            maxAge: 1000 * 60 * 60 * 24 * 7,
+            secure: process.env.NODE_ENV === "production",
             sameSite: "lax"
         },
-        store: process.env.MONGO_URI
-            ? MongoStore.create({
-                mongoUrl: process.env.MONGO_URI,
-                ttl: 60 * 60 * 24 * 14 // 14 days
-            })
-            : undefined
+        store: MongoStore.create({
+            mongoUrl: process.env.MONGO_URI,
+            ttl: 60 * 60 * 24 * 14
+        })
     })
 );
 
@@ -181,134 +169,112 @@ passport.deserializeUser(async (id, done) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-// expose isAdmin to templates
+// expose admin flag
 app.use((req, res, next) => {
     res.locals.isAdmin = !!req.user;
     next();
 });
 
+// auth guard
 function ensureAuth(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) return next();
     res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 5) Mail transport (contact form)
-// ─────────────────────────────────────────────────────────────────────────────
-function makeTransport() {
-    // Prefer MAIL_SERVICE (like "gmail") with MAIL_USER/MAIL_PASS
-    if (process.env.MAIL_SERVICE && process.env.MAIL_USER && process.env.MAIL_PASS) {
-        return nodemailer.createTransport({
-            service: process.env.MAIL_SERVICE,
-            auth: {
-                user: process.env.MAIL_USER,
-                pass: process.env.MAIL_PASS
+// ---------- Mail transport ----------
+let transporter = null;
+(function setupMailer() {
+    const hasService = !!process.env.MAIL_SERVICE;
+    const hasHost = !!process.env.MAIL_HOST;
+    const user = process.env.MAIL_USER;
+    const pass = process.env.MAIL_PASS;
+
+    if ((hasService || hasHost) && user && pass) {
+        const options = hasService
+            ? {
+                service: process.env.MAIL_SERVICE,
+                auth: { user, pass }
             }
-        });
+            : {
+                host: process.env.MAIL_HOST,
+                port: Number(process.env.MAIL_PORT) || 465,
+                secure: String(process.env.MAIL_SECURE || "true").toLowerCase() === "true",
+                auth: { user, pass }
+            };
+
+        // allow local corporate MITM certs if needed
+        if (process.env.MAIL_TLS_REJECT_UNAUTHORIZED === "0") {
+            options.tls = { rejectUnauthorized: false };
+        }
+
+        transporter = nodemailer.createTransport(options);
+    } else {
+        console.log("📧 Mail transport disabled (missing env).");
     }
+})();
 
-    // Fallback to manual host/port
-    if (process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASS) {
-        const secure =
-            String(process.env.MAIL_SECURE || "").toLowerCase() === "true" ||
-            Number(process.env.MAIL_PORT) === 465;
-
-        const tls =
-            process.env.MAIL_ALLOW_SELF_SIGNED === "1"
-                ? { rejectUnauthorized: false }
-                : undefined;
-
-        return nodemailer.createTransport({
-            host: process.env.MAIL_HOST,
-            port: Number(process.env.MAIL_PORT) || (secure ? 465 : 587),
-            secure,
-            auth: {
-                user: process.env.MAIL_USER,
-                pass: process.env.MAIL_PASS
-            },
-            tls
-        });
-    }
-
-    return null;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 6) Core pages
-// ─────────────────────────────────────────────────────────────────────────────
+// ---------- Core pages ----------
 app.get("/", (req, res) => res.render("home", { title: "Home" }));
 app.get("/about", (req, res) => res.render("about", { title: "About" }));
 app.get("/projects", (req, res) => res.render("projects", { title: "Projects" }));
 
-// Contact
+// Contact (GET shows form; POST sends)
 app.get("/contact", (req, res) => {
-    res.render("contact", {
-        title: "Contact",
-        sent: req.query.sent === "1",
-        err: req.query.err || null,
-        form: { name: "", email: "", message: "" }
-    });
+    res.render("contact", { title: "Contact", sent: false, err: null, form: {} });
 });
 
 app.post("/contact", async (req, res) => {
-    const transporter = makeTransport();
+    const { name = "", email = "", message = "" } = req.body || {};
+    if (!email || !message) {
+        return res.render("contact", {
+            title: "Contact",
+            sent: false,
+            err: "Please provide your email and a message.",
+            form: { name, email, message }
+        });
+    }
 
     if (!transporter) {
-        // Mail not configured on server
         return res.render("contact", {
             title: "Contact",
             sent: false,
             err: "Email is not configured on the server.",
-            form: {
-                name: req.body.name || "",
-                email: req.body.email || "",
-                message: req.body.message || ""
-            }
+            form: { name, email, message }
         });
     }
 
     try {
-        const name = (req.body.name || "").trim();
-        const fromEmail = (req.body.email || "").trim();
-        const message = (req.body.message || "").trim();
-        if (!fromEmail || !message) {
-            return res.render("contact", {
-                title: "Contact",
-                sent: false,
-                err: "Please provide your email and a message.",
-                form: { name, email: fromEmail, message }
-            });
-        }
-
-        const to = process.env.MAIL_TO || process.env.MAIL_USER;
+        const to = process.env.MAIL_TO || process.env.EMAIL || process.env.MAIL_USER;
         await transporter.sendMail({
-            from: process.env.MAIL_FROM || fromEmail,
-            replyTo: fromEmail,
+            from: process.env.MAIL_FROM || process.env.MAIL_USER,
             to,
-            subject: `New message from ${name || "Contact form"}`,
+            subject: `Website contact from ${name || email}`,
+            replyTo: email,
             text: message,
-            html: `<p>${message.replace(/\n/g, "<br>")}</p>`
+            html: `<p><strong>From:</strong> ${name || "(no name)"} &lt;${email}&gt;</p><p>${message.replace(
+                /\n/g,
+                "<br>"
+            )}</p>`
         });
 
-        res.redirect("/contact?sent=1");
+        res.render("contact", {
+            title: "Contact",
+            sent: true,
+            err: null,
+            form: {}
+        });
     } catch (e) {
         console.error("📮 contact error:", e);
         res.render("contact", {
             title: "Contact",
             sent: false,
             err: "Could not send your message. Try again later.",
-            form: {
-                name: req.body.name || "",
-                email: req.body.email || "",
-                message: req.body.message || ""
-            }
+            form: { name, email, message }
         });
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 7) Auth pages (login / logout / change password)
-// ─────────────────────────────────────────────────────────────────────────────
+// ---------- Auth ----------
 app.get("/login", (req, res) => {
     res.render("login", {
         title: "Login",
@@ -333,122 +299,85 @@ app.post("/logout", (req, res, next) => {
     });
 });
 
-// Change password
-app.get("/change-password", ensureAuth, (req, res) => {
-    res.render("change-password", { error: null, success: null });
+// Change password (admin)
+app.get("/admin/change-password", ensureAuth, (req, res) => {
+    res.render("change-password", { title: "Change Password", error: null, ok: null });
 });
-// alias for old link
-app.get("/admin/change-password", (req, res) => res.redirect("/change-password"));
 
-app.post("/change-password", ensureAuth, async (req, res) => {
+app.post("/admin/change-password", ensureAuth, async (req, res) => {
+    const { currentPassword = "", newPassword = "", confirmPassword = "" } = req.body || {};
     try {
-        const { currentPassword, newPassword, confirmPassword } = req.body;
+        const user = await User.findById(req.user._id);
+        if (!user) return res.render("change-password", { title: "Change Password", error: "User not found.", ok: null });
 
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            return res.status(400).render("change-password", {
-                error: "Please fill in all fields.",
-                success: null
-            });
+        const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!ok) return res.render("change-password", { title: "Change Password", error: "Current password is incorrect.", ok: null });
+
+        if (!newPassword || newPassword.length < 8) {
+            return res.render("change-password", { title: "Change Password", error: "New password must be at least 8 characters.", ok: null });
         }
         if (newPassword !== confirmPassword) {
-            return res.status(400).render("change-password", {
-                error: "New passwords do not match.",
-                success: null
-            });
-        }
-
-        const user = await User.findById(req.user._id);
-        const ok = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!ok) {
-            return res.status(400).render("change-password", {
-                error: "Current password is incorrect.",
-                success: null
-            });
+            return res.render("change-password", { title: "Change Password", error: "Passwords do not match.", ok: null });
         }
 
         user.passwordHash = await bcrypt.hash(newPassword, 12);
         await user.save();
-
-        return res.render("change-password", {
-            error: null,
-            success: "Password updated successfully."
-        });
+        res.render("change-password", { title: "Change Password", error: null, ok: "Password updated successfully." });
     } catch (e) {
         console.error("change-password error:", e);
-        return res.status(500).render("change-password", {
-            error: "Something went wrong. Please try again.",
-            success: null
-        });
+        res.render("change-password", { title: "Change Password", error: "Unexpected error.", ok: null });
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 8) Blog: list (with search + tags + pagination) & post page
-// ─────────────────────────────────────────────────────────────────────────────
-// Blog list with search + tag + status + pagination
+// ---------- Blog (public) ----------
 app.get("/blog", async (req, res) => {
     try {
-        if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
+        const q = req.query.q || "";
+        const tag = req.query.tag || "";
+        const page = Math.max(1, parseInt(req.query.page)) || 1;
+        const limit = 5;
 
-        const page = Math.max(parseInt(req.query.page || "1", 10), 1);
-        const pageSize = Math.min(Math.max(parseInt(req.query.size || "5", 10), 1), 20);
-        const q = (req.query.q || "").trim();
-        const tag = (req.query.tag || "").trim();
-        const status = (req.query.status || "").trim(); // ← NEW
+        // IMPORTANT: show documents where published === true OR field doesn't exist (old posts)
+        const baseFilter = { $or: [{ published: true }, { published: { $exists: false } }] };
 
-        const filter = {};
-
-        // Status filtering rules:
-        // - status=published → only published
-        // - status=draft     → only drafts (admin-only meaningful, but we allow if someone hits the URL)
-        // - status empty     → show all to admin; hide drafts from public
-        if (status === "published") {
-            filter.published = true;
-        } else if (status === "draft") {
-            filter.published = false;
-        } else {
-            if (!req.user) filter.published = { $ne: false }; // hide drafts from public
-            // if admin and no status → show everything
-        }
-
-        if (q) {
-            filter.$or = [
-                { title: { $regex: q, $options: "i" } },
-                { body: { $regex: q, $options: "i" } }
-            ];
-        }
-
-        if (tag) {
-            filter.tags = tag;
-        }
+        const filter = {
+            $and: [
+                baseFilter,
+                q
+                    ? {
+                        $or: [
+                            { title: new RegExp(q, "i") },
+                            { body: new RegExp(q, "i") }
+                        ]
+                    }
+                    : {},
+                tag ? { tags: tag.toLowerCase() } : {}
+            ]
+        };
 
         const total = await Post.countDocuments(filter);
-        const totalPages = Math.max(Math.ceil(total / pageSize), 1);
-
         const posts = await Post.find(filter)
             .sort({ createdAt: -1 })
-            .skip((page - 1) * pageSize)
-            .limit(pageSize)
+            .skip((page - 1) * limit)
+            .limit(limit)
             .lean();
 
+        // SEO
         res.locals.meta = {
             ...res.locals.meta,
             title: `Blog • ${app.locals.site.name}`,
             description: "Notes from my learning-in-public journey.",
-            type: "website",
             url: absUrl(req, "/blog"),
-            canonical: absUrl(req, "/blog"),
+            canonical: absUrl(req, "/blog")
         };
 
         res.render("blog", {
             title: "Blog",
             posts,
-            page,
-            totalPages,
             q,
             tag,
-            status,           // ← NEW: send it to the view
-            isAdmin: !!req.user
+            page,
+            totalPages: Math.max(1, Math.ceil(total / limit))
         });
     } catch (err) {
         console.error("💥 /blog error:", err);
@@ -456,15 +385,13 @@ app.get("/blog", async (req, res) => {
     }
 });
 
-
 app.get("/blog/:slug", async (req, res) => {
     try {
-        if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
+        const post = await Post.findOne({
+            slug: req.params.slug,
+            $or: [{ published: true }, { published: { $exists: false } }]
+        }).lean();
 
-        const filter = { slug: req.params.slug };
-        if (!req.user) filter.published = { $ne: false };
-
-        const post = await Post.findOne(filter).lean();
         if (!post) return res.status(404).send("Post not found");
 
         const html = post.bodyHtml || mdToHtml(post.body || "");
@@ -477,30 +404,20 @@ app.get("/blog/:slug", async (req, res) => {
             type: "article",
             url: absUrl(req, `/blog/${post.slug}`),
             canonical: absUrl(req, `/blog/${post.slug}`),
-            image: post.coverImage || absUrl(req, "/img/share-default.jpg")
+            image: post.coverImage || absUrl(req, "/img/blog/share-default.png")
         };
 
-        res.render("post", { title: post.title, post, html, isAdmin: !!req.user });
+        res.render("post", { title: post.title, post, html });
     } catch (err) {
         console.error("💥 /blog/:slug error:", err);
         res.status(500).send("Post failed: " + (err?.message || "unknown"));
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 9) Blog admin (create / edit / delete) — protected
-//     Supports: coverImage, tags (comma/space-separated), published toggle
-// ─────────────────────────────────────────────────────────────────────────────
+// ---------- Blog admin (protected) ----------
 app.get("/admin/blog/new", ensureAuth, (_req, res) => {
     res.render("new-post", { title: "New Post" });
 });
-
-function parseTags(input = "") {
-    return (input || "")
-        .split(/[,\n ]+/)
-        .map(s => s.trim())
-        .filter(Boolean);
-}
 
 app.post("/admin/blog", ensureAuth, async (req, res) => {
     try {
@@ -511,18 +428,21 @@ app.post("/admin/blog", ensureAuth, async (req, res) => {
         const existing = await Post.findOne({ slug }).lean();
         if (existing) return res.status(409).send("A post with this title already exists.");
 
-        const html = mdToHtml(body);
+        const tagArr = (tags || "")
+            .split(",")
+            .map(t => t.trim().toLowerCase())
+            .filter(Boolean);
 
+        const html = mdToHtml(body);
         await Post.create({
             title,
             slug,
             body,
             bodyHtml: html,
             coverImage: coverImage || null,
-            tags: parseTags(tags),
-            published: published === "on"
+            tags: tagArr,
+            published: published === "on" || published === true
         });
-
         res.redirect(`/blog/${slug}`);
     } catch (err) {
         console.error("💥 create post error:", err);
@@ -555,13 +475,18 @@ app.post("/admin/blog/:slug", ensureAuth, async (req, res) => {
             if (conflict) return res.status(409).send("Another post already uses that title.");
         }
 
+        const tagArr = (tags || "")
+            .split(",")
+            .map(t => t.trim().toLowerCase())
+            .filter(Boolean);
+
         current.title = title;
         current.slug = newSlug;
         current.body = body;
         current.bodyHtml = mdToHtml(body);
         current.coverImage = coverImage || null;
-        current.tags = parseTags(tags);
-        current.published = published === "on";
+        current.tags = tagArr;
+        current.published = published === "on" || published === true;
 
         await current.save();
         res.redirect(`/blog/${current.slug}`);
@@ -581,17 +506,19 @@ app.post("/admin/blog/:slug/delete", ensureAuth, async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 10) SEO + diagnostics
-// ─────────────────────────────────────────────────────────────────────────────
+// ---------- SEO helpers ----------
 app.get("/sitemap.xml", async (req, res) => {
     try {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
         const staticUrls = ["/", "/projects", "/about", "/contact", "/blog"]
             .map(u => `  <url><loc>${base}${u}</loc><changefreq>weekly</changefreq></url>`)
             .join("\n");
+        const posts = await Post.find({
+            $or: [{ published: true }, { published: { $exists: false } }]
+        })
+            .sort({ createdAt: -1 })
+            .lean();
 
-        const posts = await Post.find({ published: { $ne: false } }).sort({ createdAt: -1 }).lean();
         const postUrls = posts
             .map(p => `  <url><loc>${base}/blog/${p.slug}</loc><changefreq>weekly</changefreq></url>`)
             .join("\n");
@@ -611,7 +538,11 @@ ${postUrls}
 app.get("/rss.xml", async (req, res) => {
     try {
         const base = (process.env.BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
-        const posts = await Post.find({ published: { $ne: false } }).sort({ createdAt: -1 }).lean();
+        const posts = await Post.find({
+            $or: [{ published: true }, { published: { $exists: false } }]
+        })
+            .sort({ createdAt: -1 })
+            .lean();
 
         const items = posts
             .map(p => {
@@ -644,14 +575,7 @@ app.get("/rss.xml", async (req, res) => {
     }
 });
 
-// Diagnostics / seed / health
-app.get("/diag", (_req, res) => {
-    const hasEnv = Boolean(process.env.MONGO_URI);
-    const readyState = mongoose.connection?.readyState; // 0=down,1=up,2=connecting,3=disconnecting
-    const host = mongoose.connection?.host;
-    res.json({ hasEnv, readyState, host });
-});
-
+// ---------- Dev helpers ----------
 app.get("/dev/seed", async (_req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
@@ -661,9 +585,8 @@ app.get("/dev/seed", async (_req, res) => {
                 {
                     title: "Hello World",
                     slug: "hello-world",
-                    body:
-                        "My first post from the bootcamp project! This site uses Node.js, Express, EJS, and MongoDB.",
-                    tags: ["intro"],
+                    body: "My first post from the bootcamp project! This site uses Node.js, Express, EJS, and MongoDB.",
+                    tags: ["intro", "node"],
                     published: true
                 },
                 {
@@ -686,9 +609,4 @@ app.get("/dev/seed", async (_req, res) => {
 app.get("/health", (_req, res) => res.send("ok"));
 app.use((_req, res) => res.status(404).send("Not Found"));
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 11) Start server
-// ─────────────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-    console.log(`🚀 http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 http://localhost:${PORT}`));
