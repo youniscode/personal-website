@@ -26,6 +26,8 @@ import User from "./models/user.js";
 dotenv.config();
 
 const app = express();
+// Behind Render's proxy so secure cookies work
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -126,6 +128,7 @@ if (process.env.MONGO_URI) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Sessions + Passport (local strategy)
 // ─────────────────────────────────────────────────────────────────────────────
+// ───── Sessions + Passport (local strategy) ─────
 const sessionSecret = process.env.SESSION_SECRET || "change-me-please";
 app.use(
     session({
@@ -135,14 +138,15 @@ app.use(
         cookie: {
             maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
             secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
+            sameSite: "lax"
         },
         store: MongoStore.create({
             mongoUrl: process.env.MONGO_URI,
-            ttl: 60 * 60 * 24 * 14, // 14 days
+            ttl: 60 * 60 * 24 * 14 // 14 days
         }),
     })
 );
+
 
 passport.use(
     new LocalStrategy(
