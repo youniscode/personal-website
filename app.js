@@ -433,33 +433,31 @@ app.get("/blog", async (req, res) => {
 app.get("/blog/:slug", async (req, res) => {
     try {
         if (!mongoose.connection.readyState) return res.status(503).send("DB not connected");
-
-        const isAuthed = req.isAuthenticated && req.isAuthenticated();
-        const baseFilter = { slug: req.params.slug };
-        const filter = isAuthed ? baseFilter : publicPostFilter(baseFilter);
-
-        const post = await Post.findOne(filter).lean();
+        const post = await Post.findOne({ slug: req.params.slug }).lean();
         if (!post) return res.status(404).send("Post not found");
 
         const html = post.bodyHtml || mdToHtml(post.body || "");
         const desc = summarize(html, 180);
+        const shareUrl = absUrl(req, `/blog/${post.slug}`); // 👈 add this
 
         res.locals.meta = {
             ...res.locals.meta,
             title: `${post.title} • ${app.locals.site.name}`,
             description: desc,
             type: "article",
-            url: absUrl(req, `/blog/${post.slug}`),
-            canonical: absUrl(req, `/blog/${post.slug}`),
-            image: post.coverImage || absUrl(req, "/img/blog/share-default.png"),
+            url: shareUrl,
+            canonical: shareUrl,
+            image: post.coverImage || absUrl(req, "/img/share-default.jpg")
         };
 
-        res.render("post", { title: post.title, post, html, isAdmin: !!req.user });
+        // 👇 pass shareUrl into the template
+        res.render("post", { title: post.title, post, html, isAdmin: !!req.user, shareUrl });
     } catch (err) {
         console.error("💥 /blog/:slug error:", err);
         res.status(500).send("Post failed: " + (err?.message || "unknown"));
     }
 });
+
 
 // New post (admin)
 app.get("/admin/blog/new", ensureAuth, (_req, res) => {
