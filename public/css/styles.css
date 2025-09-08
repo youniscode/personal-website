@@ -514,3 +514,31 @@ footer a {
 .card .form-text {
     color: #6c757d;
 }
+
+/* ============================
+   Projects Page Styling
+   ============================ */
+
+/* Keep all project thumbnails the same height and nicely cropped */
+.project-thumb {
+    height: 180px;
+    /* Fixed height for uniform cards */
+    object-fit: cover;
+    /* Crops the image without stretching */
+    border-top-left-radius: .5rem;
+    /* Match Bootstrap card rounding */
+    border-top-right-radius: .5rem;
+}
+
+/* Add a subtle hover effect to cards */
+.card:hover {
+    transform: translateY(-4px);
+    /* Slight lift on hover */
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Keep "Coming soon" badge subtle but clear */
+.card .badge.bg-secondary {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
