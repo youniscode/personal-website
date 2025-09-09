@@ -222,6 +222,22 @@ footer a {
     text-decoration: underline;
 }
 
+/* ===== Footer polish ===== */
+footer a.footer-link {
+    color: #e9ecef;
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(233, 236, 239, 0.35);
+}
+
+footer a.footer-link:hover {
+    color: #ffffff;
+    border-bottom-color: transparent;
+}
+
+footer .text-secondary {
+    color: #adb5bd !important;
+}
+
 /* Post hero cover (16:9 with object-fit) */
 .post-hero .post-cover {
     position: relative;
@@ -516,8 +532,8 @@ footer a {
 }
 
 /* ============================
-   Projects Page Styling
-   ============================ */
+Projects Page Styling
+============================ */
 
 /* Keep all project thumbnails the same height and nicely cropped */
 .project-thumb {
