@@ -1,5 +1,4 @@
-<%- include('partials/html-start', { title: post.title, description: (post.bodyHtml || post.body || ''
-    ).replace(/<[^>]+>/g,'').slice(0,160) }) %>
+<%- include('partials/html-start', { title: post.title }) %>
     <%- include('partials/header') %>
 
         <section class="section">
@@ -21,33 +20,46 @@
                         <% } %>
                 </div>
 
-                <!-- Title + meta -->
+                <!-- Title -->
                 <header class="mb-3">
                     <h1 class="mb-2">
                         <%= post.title %>
                     </h1>
-                    <div class="d-flex flex-wrap align-items-center gap-2 text-muted small">
+
+                    <!-- Meta line -->
+                    <div class="text-muted small d-flex flex-wrap align-items-center gap-2">
                         <time datetime="<%= new Date(post.createdAt).toISOString() %>">
                             <%= new Date(post.createdAt).toLocaleDateString() %>
                         </time>
 
-                        <% if (isAdmin && post.published===false) { %>
-                            <span class="badge bg-warning-subtle text-warning-emphasis">Draft</span>
+                        <% if (typeof readMins !=='undefined' ) { %>
+                            · <span>
+                                <%= readMins %> min read
+                            </span>
                             <% } %>
 
-                                <% if (Array.isArray(post.tags) && post.tags.length) { %>
-                                    <span>·</span>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <% post.tags.forEach(t=> { %>
-                                            <a class="badge rounded-pill text-bg-light text-decoration-none"
-                                                href="/blog?tag=<%= encodeURIComponent(t) %>">#<%= t %></a>
-                                            <% }) %>
-                                    </div>
+                                <% if (post.updatedAt && post.createdAt && new Date(post.updatedAt) - new
+                                    Date(post.createdAt)> 5 * 60 * 1000) { %>
+                                    · <span>Updated <%= new Date(post.updatedAt).toLocaleDateString() %></span>
                                     <% } %>
+
+                                        <% if (Array.isArray(post.tags) && post.tags.length) { %>
+                                            ·
+                                            <% post.tags.forEach((t, i)=> { %>
+                                                <a class="text-decoration-none"
+                                                    href="/blog?tag=<%= encodeURIComponent(t) %>">#<%= t %></a>
+                                                <%= i < post.tags.length - 1 ? ',' : '' %>
+                                                    <% }) %>
+                                                        <% } %>
+
+                                                            <% if (isAdmin && post.published===false) { %>
+                                                                · <span
+                                                                    class="badge bg-warning-subtle text-warning-emphasis align-middle">Draft</span>
+                                                                <% } %>
                     </div>
                 </header>
 
-                <!-- Cover -->
+                <!-- Cover image -->
                 <% if (post.coverImage) { %>
                     <figure class="mb-4">
                         <img src="<%= post.coverImage %>" class="img-fluid rounded border" alt="">
@@ -59,7 +71,7 @@
                             <%- html %>
                         </article>
 
-                        <!-- Share -->
+                        <!-- Share row -->
                         <div class="border-top pt-3 mt-4">
                             <div class="d-flex flex-wrap align-items-center gap-2">
                                 <span class="text-muted me-1">Share:</span>
@@ -85,55 +97,53 @@
                             </div>
                         </div>
 
-                        <!-- Prev / Next (only if provided by the route) -->
-                        <% if ((typeof prevSlug !=='undefined' && prevSlug) || (typeof nextSlug !=='undefined' &&
-                            nextSlug)) { %>
-                            <nav class="border-top pt-3 mt-4 d-flex justify-content-between">
-                                <div>
-                                    <% if (prevSlug) { %>
-                                        <a class="text-decoration-none" href="/blog/<%= prevSlug %>">&larr; Previous</a>
-                                        <% } %>
-                                </div>
-                                <div>
-                                    <% if (nextSlug) { %>
-                                        <a class="text-decoration-none" href="/blog/<%= nextSlug %>">Next &rarr;</a>
-                                        <% } %>
-                                </div>
-                            </nav>
+                        <!-- Prev/Next -->
+                        <% if (prev || next) { %>
+                            <div class="row mt-4 g-2">
+                                <% if (prev) { %>
+                                    <div class="col-md-6">
+                                        <a class="d-block p-3 border rounded text-decoration-none h-100"
+                                            href="/blog/<%= prev.slug %>">
+                                            <div class="small text-muted">Previous</div>
+                                            <div class="fw-semibold">
+                                                <%= prev.title %>
+                                            </div>
+                                        </a>
+                                    </div>
+                                    <% } %>
+                                        <% if (next) { %>
+                                            <div class="col-md-6">
+                                                <a class="d-block p-3 border rounded text-decoration-none h-100 text-end"
+                                                    href="/blog/<%= next.slug %>">
+                                                    <div class="small text-muted">Next</div>
+                                                    <div class="fw-semibold">
+                                                        <%= next.title %>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                            <% } %>
+                            </div>
                             <% } %>
 
             </div>
         </section>
 
+        <script>
+            (function () {
+                const btn = document.getElementById('copyLinkBtn');
+                const ok = document.getElementById('copyDone');
+                if (!btn) return;
+                btn.addEventListener('click', async () => {
+                    const url = btn.getAttribute('data-url') || window.location.href;
+                    try {
+                        await navigator.clipboard.writeText(url);
+                        ok?.classList.remove('d-none');
+                        setTimeout(() => ok?.classList.add('d-none'), 1500);
+                    } catch (e) {
+                        alert('Copy failed. You can copy from the address bar.');
+                    }
+                });
+            })();
+        </script>
+
         <%- include('partials/html-end') %>
-
-            <script>
-                (function () {
-                    const btn = document.getElementById('copyLinkBtn');
-                    const ok = document.getElementById('copyDone');
-                    if (!btn) return;
-                    btn.addEventListener('click', async () => {
-                        const url = btn.getAttribute('data-url') || window.location.href;
-                        try {
-                            await navigator.clipboard.writeText(url);
-                            ok?.classList.remove('d-none');
-                            setTimeout(() => ok?.classList.add('d-none'), 1500);
-                        } catch (e) {
-                            alert('Copy failed. You can copy from the address bar.');
-                        }
-                    });
-
-                    // Admin shortcuts: 'e' to edit, 'Backspace' to delete (with confirm)
-                    document.addEventListener('keydown', (e) => {
-                        if (e.target && ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-                        if (e.key.toLowerCase() === 'e') {
-                            const edit = document.querySelector('a[href*="/edit"]');
-                            if (edit) window.location.href = edit.href;
-                        }
-                        if (e.key === 'Backspace') {
-                            const form = document.querySelector('form[action*="/delete"]');
-                            if (form && confirm('Delete this post?')) form.submit();
-                        }
-                    });
-                })();
-            </script>

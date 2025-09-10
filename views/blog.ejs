@@ -18,19 +18,21 @@
                     </form>
                 </div>
 
-                <!-- Active tag filter -->
+                <!-- Active tag filter header -->
                 <% if (typeof tag !=='undefined' && tag) { %>
-                    <div class="mb-3">
+                    <div class="d-flex align-items-center mb-3">
                         <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis me-2">
                             Tag: <%= tag %>
                         </span>
-                        <a href="/blog" class="small">Clear</a>
+                        <a href="/blog" class="small text-decoration-none">Clear</a>
                     </div>
                     <% } %>
 
                         <!-- Empty state -->
                         <% if (!posts || posts.length===0) { %>
-                            <div class="alert alert-info">No posts found.</div>
+                            <div class="alert alert-info">
+                                No posts found. Try clearing filters or searching with different keywords.
+                            </div>
                             <% } %>
 
                                 <!-- List -->
@@ -38,6 +40,7 @@
                                     <% (posts || []).forEach(p=> { %>
                                         <article class="card shadow-sm overflow-hidden">
                                             <div class="row g-0">
+
                                                 <!-- Thumb (if any) -->
                                                 <div class="col-md-3 d-none d-md-block">
                                                     <a href="/blog/<%= p.slug %>"
@@ -52,7 +55,9 @@
                                                 <!-- Text -->
                                                 <div class="col-md-9">
                                                     <div class="card-body">
-                                                        <div class="d-flex align-items-center gap-2 mb-1">
+
+                                                        <!-- Title + status chips -->
+                                                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                                                             <h2 class="h5 mb-0">
                                                                 <a class="link-dark text-decoration-none"
                                                                     href="/blog/<%= p.slug %>">
@@ -60,48 +65,67 @@
                                                                 </a>
                                                             </h2>
 
-                                                            <!-- STATUS CHIP FOR ADMINS -->
-                                                            <% if (isAdmin) { %>
-                                                                <% if (p.published) { %>
-                                                                    <span class="badge text-bg-success">Published</span>
-                                                                    <% } else { %>
+                                                            <% if (isAdmin && p.published===false) { %>
+                                                                <span
+                                                                    class="badge bg-warning-subtle text-warning-emphasis">Draft</span>
+                                                                <% } %>
+                                                                    <% if (p.updatedAt && p.createdAt && new
+                                                                        Date(p.updatedAt) - new Date(p.createdAt)> 5 *
+                                                                        60 * 1000) { %>
                                                                         <span
-                                                                            class="badge bg-warning-subtle text-warning-emphasis">Draft</span>
+                                                                            class="badge bg-info-subtle text-info-emphasis">Updated</span>
                                                                         <% } %>
+                                                                            <% if (typeof p.readMins !=='undefined' ) {
+                                                                                %>
+                                                                                <span
+                                                                                    class="badge bg-light border text-muted">
+                                                                                    <%= p.readMins %> min read
+                                                                                </span>
+                                                                                <% } %>
+                                                        </div>
+
+                                                        <!-- Meta line -->
+                                                        <div class="text-muted small mb-2">
+                                                            <time datetime="<%= new Date(p.createdAt).toISOString() %>">
+                                                                <%= new Date(p.createdAt).toLocaleDateString() %>
+                                                            </time>
+                                                            <% if (p.tags && p.tags.length) { %> ·
+                                                                <% p.tags.forEach((t, i)=> { %>
+                                                                    <a href="/blog?tag=<%= encodeURIComponent(t) %>"
+                                                                        class="text-decoration-none">#<%= t %></a>
+                                                                    <%= i < p.tags.length - 1 ? ', ' : '' %>
+                                                                        <% }) %>
                                                                             <% } %>
                                                         </div>
 
-                                                        <div class="text-muted small mb-2">
-                                                            <%= new Date(p.createdAt).toLocaleDateString() %>
-                                                        </div>
-
+                                                        <!-- Excerpt -->
                                                         <p class="mb-3">
                                                             <%= (p.bodyHtml || '' ).replace(/<[^>]+>/g, '').slice(0,
                                                                 180) %>…
                                                         </p>
 
+                                                        <!-- Tag chips -->
                                                         <% if (p.tags && p.tags.length) { %>
                                                             <div class="mb-3 d-flex flex-wrap gap-2">
                                                                 <% p.tags.forEach(t=> { %>
                                                                     <a href="/blog?tag=<%= encodeURIComponent(t) %>"
-                                                                        class="badge rounded-pill bg-light border">
-                                                                        #<%= t %>
-                                                                    </a>
+                                                                        class="badge rounded-pill bg-light border">#<%=
+                                                                            t %></a>
                                                                     <% }) %>
                                                             </div>
                                                             <% } %>
 
+                                                                <!-- Actions -->
                                                                 <div class="d-flex gap-2">
                                                                     <a href="/blog/<%= p.slug %>"
                                                                         class="btn btn-sm btn-primary">Read more</a>
                                                                     <% if (isAdmin) { %>
                                                                         <a href="/admin/blog/<%= p.slug %>/edit"
                                                                             class="btn btn-sm btn-outline-secondary"
-                                                                            data-admin-edit>
-                                                                            Edit
-                                                                        </a>
+                                                                            data-admin-edit>Edit</a>
                                                                         <% } %>
                                                                 </div>
+
                                                     </div>
                                                 </div>
                                             </div>
@@ -115,15 +139,13 @@
                                         <ul class="pagination justify-content-center">
                                             <li class="page-item <%= page <= 1 ? 'disabled' : '' %>">
                                                 <a class="page-link"
-                                                    href="?page=<%= page - 1 %><%= q ? '&q=' + encodeURIComponent(q) : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %>">
-                                                    Prev
-                                                </a>
+                                                    href="?page=<%= page-1 %><%= q ? '&q='+encodeURIComponent(q) : '' %><%= tag ? '&tag='+encodeURIComponent(tag) : '' %>">Prev</a>
                                             </li>
 
                                             <% for (let i=1; i <=totalPages; i++) { %>
                                                 <li class="page-item <%= i === page ? 'active' : '' %>">
                                                     <a class="page-link"
-                                                        href="?page=<%= i %><%= q ? '&q=' + encodeURIComponent(q) : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %>">
+                                                        href="?page=<%= i %><%= q ? '&q='+encodeURIComponent(q) : '' %><%= tag ? '&tag='+encodeURIComponent(tag) : '' %>">
                                                         <%= i %>
                                                     </a>
                                                 </li>
@@ -131,9 +153,7 @@
 
                                                     <li class="page-item <%= page >= totalPages ? 'disabled' : '' %>">
                                                         <a class="page-link"
-                                                            href="?page=<%= page + 1 %><%= q ? '&q=' + encodeURIComponent(q) : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %>">
-                                                            Next
-                                                        </a>
+                                                            href="?page=<%= page+1 %><%= q ? '&q='+encodeURIComponent(q) : '' %><%= tag ? '&tag='+encodeURIComponent(tag) : '' %>">Next</a>
                                                     </li>
                                         </ul>
                                     </nav>

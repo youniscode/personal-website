@@ -2,49 +2,58 @@
     <%- include('partials/header') %>
 
         <section class="section">
-            <div class="container">
-                <h1 class="mb-4">New Post</h1>
+            <div class="container" style="max-width: 860px;">
+                <h1 class="display-6 fw-bolder mb-4">New Post</h1>
 
-                <form method="post" action="/admin/blog/new">
+                <form method="post" action="/admin/blog" class="card shadow-sm p-4">
                     <div class="mb-3">
-                        <label class="form-label">Title *</label>
-                        <input type="text" name="title" class="form-control" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Slug *</label>
-                        <input type="text" name="slug" class="form-control" placeholder="my-post-slug" required>
-                        <div class="form-text">Used in the URL: /blog/&lt;slug&gt;</div>
+                        <label class="form-label">Title</label>
+                        <input name="title" type="text" class="form-control" placeholder="Post title..." required>
+                        <div class="form-text">Slug will be generated from the title.</div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Cover image URL</label>
-                        <input type="url" name="coverImage" class="form-control" placeholder="https://...">
+                        <input name="coverImage" type="url" class="form-control" placeholder="https://…/image.jpg">
+                        <div class="form-text">Optional. Used for social cards and the list thumbnail.</div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Tags (comma-separated)</label>
-                        <input type="text" name="tags" class="form-control" placeholder="node, express, ejs">
+                        <label class="form-label">Tags</label>
+                        <input name="tags" type="text" class="form-control" placeholder="e.g. javascript, node, notes">
+                        <div class="form-text">Comma-separated. We’ll normalize to lowercase.</div>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="published" name="published" checked>
+                        <label class="form-check-label" for="published">Published</label>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Body (Markdown supported)</label>
-                        <textarea name="body" class="form-control" rows="12" required></textarea>
-                    </div>
-
-                    <!-- NEW: Published toggle -->
-                    <div class="form-check form-switch mb-4">
-                        <input class="form-check-input" type="checkbox" role="switch" id="publishedSwitch"
-                            name="published" checked>
-                        <label class="form-check-label" for="publishedSwitch">Published</label>
+                        <label class="form-label">Body (Markdown)</label>
+                        <textarea id="postBody" name="body" rows="14" class="form-control"
+                            placeholder="Write your post in Markdown..." required></textarea>
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Create Post</button>
+                        <button class="btn btn-primary" type="submit">Save</button>
                         <a class="btn btn-outline-secondary" href="/blog">Cancel</a>
                     </div>
                 </form>
             </div>
         </section>
+
+        <!-- SimpleMDE (Markdown editor) -->
+        <link rel="stylesheet" href="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.css">
+        <script src="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.js"></script>
+        <script>
+            const mde = new SimpleMDE({
+                element: document.getElementById('postBody'),
+                spellChecker: false,
+                status: false,
+                renderingConfig: { singleLineBreaks: false },
+                forceSync: true
+            });
+        </script>
 
         <%- include('partials/html-end') %>
