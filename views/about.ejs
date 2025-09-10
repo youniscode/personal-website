@@ -2,80 +2,62 @@
     <%- include('partials/header') %>
 
         <section class="section">
-            <div class="container">
-                <h1 class="display-5 fw-bolder mb-2">About <%= site.name %>
-                </h1>
-                <p class="lead text-muted mb-4">
-                    <%= site.role %>
+            <div class="container" style="max-width: 900px;">
+                <h1 class="display-6 fw-bolder mb-3">About me</h1>
+
+                <p class="lead">
+                    Hi, I’m <strong>
+                        <%= site.name %>
+                    </strong>, based in <%= site.location %>. I build modern web apps and care about clean UX, pragmatic
+                        product thinking, and shipping.
+                </p>
+                <p>
+                    I’m trilingual (FR/EN/AR). This site is my home on the web—where I write, share progress, and
+                    collect projects.
                 </p>
 
-                <div class="row g-4">
-                    <!-- Main card -->
-                    <div class="col-lg-8">
-                        <div class="card shadow-sm rise h-100">
-                            <div class="card-body p-4">
-                                <h2 class="h5 text-uppercase text-muted mb-3">Summary</h2>
-                                <p class="mb-4">
-                                    I’m <strong>Younis Haitham</strong>, based in Toulon, France.
-                                    I build modern web apps while working in hospitality.
-                                    I’m trilingual (FR / EN / AR) and comfortable switching between product, UX, and
-                                    code.
-                                    This site is my space to share projects, notes, and experiments while growing as a
-                                    developer.
-                                </p>
+                <hr class="my-4" />
 
-                                <h2 class="h6 text-uppercase text-muted mb-3">Skills</h2>
-                                <div class="d-flex flex-wrap gap-2 mb-4">
-                                    <span class="badge badge-soft-primary">HTML</span>
-                                    <span class="badge badge-soft-primary">CSS / Bootstrap</span>
-                                    <span class="badge badge-soft-primary">JavaScript</span>
-                                    <span class="badge badge-soft-primary">Node.js</span>
-                                    <span class="badge badge-soft-primary">Express</span>
-                                    <span class="badge badge-soft-primary">EJS</span>
-                                    <span class="badge badge-soft-secondary">MongoDB (learning)</span>
-                                    <span class="badge badge-soft-secondary">Auth / Passport (learning)</span>
-                                </div>
+                <h2 class="h5 text-uppercase text-muted mb-3">Recent posts</h2>
 
-                                <h2 class="h6 text-uppercase text-muted mb-3">Contact</h2>
-                                <ul class="list-unstyled mb-0">
-                                    <li>Email: <a href="mailto:<%= site.email %>">
-                                            <%= site.email %>
-                                        </a></li>
-                                    <% if (site.phone) { %>
-                                        <li>Phone: <%= site.phone %>
-                                        </li>
-                                        <% } %>
-                                            <% if (site.cvUrl) { %>
-                                                <li>CV: <a href="<%= site.cvUrl %>" target="_blank"
-                                                        rel="noopener">Download PDF</a></li>
+                <!-- Empty state -->
+                <% if (!(posts && posts.length)) { %>
+                    <div class="alert alert-info">No posts yet. Head over to the <a href="/blog">blog</a>.</div>
+                    <% } %>
+
+                        <div class="vstack gap-3">
+                            <% (posts || []).forEach(function(p) { %>
+                                <article class="card shadow-sm">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <h3 class="h5 mb-0">
+                                                <a class="link-dark text-decoration-none" href="/blog/<%= p.slug %>">
+                                                    <%= p.title %>
+                                                </a>
+                                            </h3>
+                                            <% if (p.published===false) { %>
+                                                <span class="badge bg-warning-subtle text-warning-emphasis">Draft</span>
                                                 <% } %>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+                                        </div>
 
-                    <!-- Sidebar card -->
-                    <div class="col-lg-4">
-                        <div class="card shadow-sm rise h-100">
-                            <div class="card-body p-4">
-                                <h2 class="h6 text-uppercase text-muted mb-3">Quick Facts</h2>
-                                <ul class="mb-3">
-                                    <li>Location: <%= site.location %>
-                                    </li>
-                                    <li>Stack: HTML, CSS/Bootstrap, JS, Node/Express, EJS</li>
-                                    <li>Next up: MongoDB, Auth, Deployments</li>
-                                </ul>
+                                        <div class="text-muted small mb-2">
+                                            <time datetime="<%= new Date(p.createdAt).toISOString() %>">
+                                                <%= new Date(p.createdAt).toLocaleDateString() %>
+                                            </time>
+                                            · <%= p.readingMinutes || 1 %> min read
+                                        </div>
 
-                                <h3 class="h6 text-uppercase text-muted mb-2">Languages</h3>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <span class="badge text-bg-dark">FR</span>
-                                    <span class="badge text-bg-dark">EN</span>
-                                    <span class="badge text-bg-dark">AR</span>
-                                </div>
-                            </div>
+                                        <p class="mb-0">
+                                            <%= (p.bodyHtml || '' ).replace(/<[^>]+>/g, '').slice(0, 160) %>…
+                                        </p>
+                                    </div>
+                                </article>
+                                <% }) %>
                         </div>
-                    </div>
-                </div><!-- /row -->
+
+                        <div class="mt-3">
+                            <a class="btn btn-outline-secondary" href="/blog">See all posts</a>
+                        </div>
             </div>
         </section>
 
