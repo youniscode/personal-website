@@ -1,62 +1,50 @@
-<%- include('partials/html-start', { title }) %>
+<%- include('partials/html-start', { title: 'New Post' }) %>
     <%- include('partials/header') %>
 
         <section class="section">
-            <div class="container" style="max-width: 860px;">
-                <h1 class="display-6 fw-bolder mb-4">New Post</h1>
+            <div class="container">
+                <h1 class="mb-4">New Post</h1>
 
-                <form method="post" action="/admin/blog" class="card shadow-sm p-4">
+                <form method="post" action="/admin/blog/new">
                     <div class="mb-3">
-                        <label class="form-label">Title</label>
-                        <input name="title" type="text" class="form-control" placeholder="Post title..." required>
-                        <div class="form-text">Slug is generated from the title.</div>
+                        <label class="form-label">Title *</label>
+                        <input type="text" name="title" class="form-control" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Cover image URL (optional)</label>
-                        <input name="coverImage" type="url" class="form-control"
-                            placeholder="/img/blog/my-cover.jpg or https://…">
+                        <label class="form-label">Slug *</label>
+                        <input type="text" name="slug" class="form-control" placeholder="my-post-slug" required>
+                        <div class="form-text">Used in the URL: /blog/&lt;slug&gt;</div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Tags</label>
-                        <input name="tags" type="text" class="form-control"
-                            placeholder="e.g. javascript, node, tutorials">
-                        <div class="form-text">Separate by comma or space.</div>
+                        <label class="form-label">Cover image URL</label>
+                        <input type="url" name="coverImage" class="form-control" placeholder="https://...">
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Body (Markdown)</label>
-                        <textarea id="postBody" name="body" rows="12" class="form-control"
-                            placeholder="Write your post in Markdown..." required></textarea>
+                        <label class="form-label">Tags (comma-separated)</label>
+                        <input type="text" name="tags" class="form-control" placeholder="node, express, ejs">
                     </div>
 
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" role="switch" id="published" name="published"
-                            checked>
-                        <label class="form-check-label" for="published">Published</label>
+                    <div class="mb-3">
+                        <label class="form-label">Body (Markdown supported)</label>
+                        <textarea name="body" class="form-control" rows="12" required></textarea>
+                    </div>
+
+                    <!-- NEW: Published toggle -->
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" role="switch" id="publishedSwitch"
+                            name="published" checked>
+                        <label class="form-check-label" for="publishedSwitch">Published</label>
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button class="btn btn-primary" type="submit">Publish</button>
+                        <button type="submit" class="btn btn-primary">Create Post</button>
                         <a class="btn btn-outline-secondary" href="/blog">Cancel</a>
                     </div>
                 </form>
             </div>
         </section>
 
-        <%- include('partials/footer') %>
-
-            <link rel="stylesheet" href="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.css">
-            <script src="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.js"></script>
-            <script>
-                const mde = new SimpleMDE({
-                    element: document.getElementById('postBody'),
-                    spellChecker: false,
-                    status: false,
-                    renderingConfig: { singleLineBreaks: false },
-                    forceSync: true
-                });
-            </script>
-
-            <%- include('partials/html-end') %>
+        <%- include('partials/html-end') %>

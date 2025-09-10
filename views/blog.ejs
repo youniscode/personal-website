@@ -21,8 +21,9 @@
                 <!-- Active tag filter -->
                 <% if (typeof tag !=='undefined' && tag) { %>
                     <div class="mb-3">
-                        <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis me-2">Tag: <%= tag
-                                %></span>
+                        <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis me-2">
+                            Tag: <%= tag %>
+                        </span>
                         <a href="/blog" class="small">Clear</a>
                     </div>
                     <% } %>
@@ -58,10 +59,16 @@
                                                                     <%= p.title %>
                                                                 </a>
                                                             </h2>
-                                                            <% if (isAdmin && p.published===false) { %>
-                                                                <span
-                                                                    class="badge bg-warning-subtle text-warning-emphasis">Draft</span>
-                                                                <% } %>
+
+                                                            <!-- STATUS CHIP FOR ADMINS -->
+                                                            <% if (isAdmin) { %>
+                                                                <% if (p.published) { %>
+                                                                    <span class="badge text-bg-success">Published</span>
+                                                                    <% } else { %>
+                                                                        <span
+                                                                            class="badge bg-warning-subtle text-warning-emphasis">Draft</span>
+                                                                        <% } %>
+                                                                            <% } %>
                                                         </div>
 
                                                         <div class="text-muted small mb-2">
@@ -69,16 +76,17 @@
                                                         </div>
 
                                                         <p class="mb-3">
-                                                            <%= (p.bodyHtml || '' ).replace(/<[^>]+>/g,'').slice(0, 180)
-                                                                %>…
+                                                            <%= (p.bodyHtml || '' ).replace(/<[^>]+>/g, '').slice(0,
+                                                                180) %>…
                                                         </p>
 
                                                         <% if (p.tags && p.tags.length) { %>
                                                             <div class="mb-3 d-flex flex-wrap gap-2">
                                                                 <% p.tags.forEach(t=> { %>
                                                                     <a href="/blog?tag=<%= encodeURIComponent(t) %>"
-                                                                        class="badge rounded-pill bg-light border">#<%=
-                                                                            t %></a>
+                                                                        class="badge rounded-pill bg-light border">
+                                                                        #<%= t %>
+                                                                    </a>
                                                                     <% }) %>
                                                             </div>
                                                             <% } %>
@@ -89,7 +97,9 @@
                                                                     <% if (isAdmin) { %>
                                                                         <a href="/admin/blog/<%= p.slug %>/edit"
                                                                             class="btn btn-sm btn-outline-secondary"
-                                                                            data-admin-edit>Edit</a>
+                                                                            data-admin-edit>
+                                                                            Edit
+                                                                        </a>
                                                                         <% } %>
                                                                 </div>
                                                     </div>
@@ -105,13 +115,15 @@
                                         <ul class="pagination justify-content-center">
                                             <li class="page-item <%= page <= 1 ? 'disabled' : '' %>">
                                                 <a class="page-link"
-                                                    href="?page=<%= page-1 %><%= q ? '&q='+encodeURIComponent(q) : '' %><%= tag ? '&tag='+encodeURIComponent(tag) : '' %>">Prev</a>
+                                                    href="?page=<%= page - 1 %><%= q ? '&q=' + encodeURIComponent(q) : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %>">
+                                                    Prev
+                                                </a>
                                             </li>
 
-                                            <% for (let i=1; i<=totalPages; i++) { %>
+                                            <% for (let i=1; i <=totalPages; i++) { %>
                                                 <li class="page-item <%= i === page ? 'active' : '' %>">
                                                     <a class="page-link"
-                                                        href="?page=<%= i %><%= q ? '&q='+encodeURIComponent(q) : '' %><%= tag ? '&tag='+encodeURIComponent(tag) : '' %>">
+                                                        href="?page=<%= i %><%= q ? '&q=' + encodeURIComponent(q) : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %>">
                                                         <%= i %>
                                                     </a>
                                                 </li>
@@ -119,7 +131,9 @@
 
                                                     <li class="page-item <%= page >= totalPages ? 'disabled' : '' %>">
                                                         <a class="page-link"
-                                                            href="?page=<%= page+1 %><%= q ? '&q='+encodeURIComponent(q) : '' %><%= tag ? '&tag='+encodeURIComponent(tag) : '' %>">Next</a>
+                                                            href="?page=<%= page + 1 %><%= q ? '&q=' + encodeURIComponent(q) : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %>">
+                                                            Next
+                                                        </a>
                                                     </li>
                                         </ul>
                                     </nav>

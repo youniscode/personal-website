@@ -1,66 +1,66 @@
-<%- include('partials/html-start', { title }) %>
+<%- include('partials/html-start', { title: `Edit: ${post.title}` }) %>
     <%- include('partials/header') %>
 
         <section class="section">
-            <div class="container" style="max-width: 860px;">
-                <h1 class="display-6 fw-bolder mb-4">Edit: <%= post.title %>
-                </h1>
+            <div class="container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h1 class="mb-0">Edit Post</h1>
 
-                <form method="post" action="/admin/blog/<%= post.slug %>" class="card shadow-sm p-4">
+                    <!-- Quick status badge & toggle button -->
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge <%= post.published ? 'text-bg-success' : 'text-bg-secondary' %>">
+                            <%= post.published ? 'Published' : 'Draft' %>
+                        </span>
+
+                        <form method="post" action="/admin/blog/<%= post.slug %>/toggle" class="d-inline">
+                            <button type="submit"
+                                class="btn btn-sm <%= post.published ? 'btn-outline-secondary' : 'btn-outline-success' %>">
+                                <%= post.published ? 'Unpublish' : 'Publish' %>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <form method="post" action="/admin/blog/<%= post.slug %>/edit">
                     <div class="mb-3">
-                        <label class="form-label">Title</label>
-                        <input name="title" type="text" class="form-control" value="<%= post.title %>" required>
+                        <label class="form-label">Title *</label>
+                        <input type="text" name="title" class="form-control" required value="<%= post.title %>">
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Cover image URL (optional)</label>
-                        <input name="coverImage" type="url" class="form-control" value="<%= post.coverImage || '' %>">
+                        <label class="form-label">Slug *</label>
+                        <input type="text" name="slug" class="form-control" required value="<%= post.slug %>">
+                        <div class="form-text">Changing the slug changes the URL.</div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Tags</label>
-                        <input name="tags" type="text" class="form-control" value="<%= (post.tags || []).join(', ') %>"
-                            placeholder="e.g. javascript node tutorials">
-                        <div class="form-text">Separate by comma or space.</div>
+                        <label class="form-label">Cover image URL</label>
+                        <input type="url" name="coverImage" class="form-control" value="<%= post.coverImage || '' %>">
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Body (Markdown)</label>
-                        <textarea id="postBody" name="body" rows="12" class="form-control"
-                            required><%= post.body %></textarea>
+                        <label class="form-label">Tags (comma-separated)</label>
+                        <input type="text" name="tags" class="form-control" value="<%= (post.tags || []).join(', ') %>">
                     </div>
 
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="published" name="published"
-                            <%=post.published !==false ? 'checked' : '' %>>
-                        <label class="form-check-label" for="published">Published</label>
+                    <div class="mb-3">
+                        <label class="form-label">Body (Markdown supported)</label>
+                        <textarea name="body" class="form-control" rows="12" required><%= post.body %></textarea>
+                    </div>
+
+                    <!-- NEW: Published toggle -->
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" role="switch" id="publishedSwitch"
+                            name="published" <%=post.published ? 'checked' : '' %>>
+                        <label class="form-check-label" for="publishedSwitch">Published</label>
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button class="btn btn-primary" type="submit">Save Changes</button>
-                        <a class="btn btn-outline-secondary" href="/blog/<%= post.slug %>">Cancel</a>
-
-                        <form method="post" action="/admin/blog/<%= post.slug %>/delete"
-                            onsubmit="return confirm('Delete “<%= post.title %>”?');" class="ms-auto">
-                            <button class="btn btn-danger" type="submit">Delete</button>
-                        </form>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <a class="btn btn-outline-secondary" href="/blog">Cancel</a>
                     </div>
                 </form>
             </div>
         </section>
 
-        <%- include('partials/footer') %>
-
-            <link rel="stylesheet" href="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.css">
-            <script src="https://unpkg.com/simplemde@1.11.2/dist/simplemde.min.js"></script>
-            <script>
-                const mde = new SimpleMDE({
-                    element: document.getElementById('postBody'),
-                    spellChecker: false,
-                    status: false,
-                    renderingConfig: { singleLineBreaks: false },
-                    forceSync: true
-                });
-            </script>
-
-            <%- include('partials/html-end') %>
+        <%- include('partials/html-end') %>
