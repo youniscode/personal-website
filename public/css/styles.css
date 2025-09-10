@@ -558,3 +558,32 @@ Projects Page Styling
     font-size: 0.8rem;
     opacity: 0.9;
 }
+
+.project-thumb {
+    height: 300px;
+    object-fit: contain;
+    object-position: center;
+    background-color: #f8f9fa;
+    padding: 8px;
+}
+
+/* ===== Project detail hero ===== */
+.project-hero {
+    /* keep bar height consistent, crop visually */
+    max-height: 520px;
+    /* adjust 420–560 to taste */
+    object-fit: cover;
+    /* fill, crop sides if needed */
+    object-position: center;
+    /* center the crop */
+    display: block;
+}
+
+/* Optional: card thumbnails on the projects grid */
+.project-thumb {
+    aspect-ratio: 16 / 9;
+    /* keep consistent tiles */
+    object-fit: cover;
+    width: 100%;
+    display: block;
+}

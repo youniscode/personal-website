@@ -244,6 +244,48 @@ app.get("/projects", (req, res) => {
     res.render("projects", { title: "Projects" });
 });
 
+// Projects list
+app.get("/projects", (req, res) => {
+    res.render("projects");
+});
+
+// Project detail: Flight Briefing & Route Kit
+app.get("/projects/flight-briefing", (req, res) => {
+    res.locals.meta = {
+        ...res.locals.meta,
+        title: `Flight Briefing & Route Kit • ${app.locals.site.name}`,
+        description:
+            "Plan routes, summarize METAR/TAF and NOTAMs, and export a printable route kit.",
+        url: absUrl(req, "/projects/flight-briefing"),
+        canonical: absUrl(req, "/projects/flight-briefing"),
+        type: "website",
+        image: absUrl(req, "/img/projects/flight-briefing-thumb.png"),
+    };
+
+    res.render("project-flight-briefing", {
+        title: "Flight Briefing & Route Kit",
+        project: {
+            // Enable the blue button when you have a live URL:
+            demoUrl: null, // e.g. "https://flight-briefing.onrender.com"
+
+            // Your real GitHub repo URL:
+            sourceUrl: "https://github.com/youniscode/flight-briefing-kit",
+
+            // 'in-progress' | 'prototype' | 'coming-soon'
+            status: "in-progress",
+        },
+    });
+});
+
+
+
+
+// About page
+app.get("/about", (req, res) => {
+    res.render("about");
+});
+
+
 // Contact
 app.get("/contact", (req, res) => {
     res.render("contact", {

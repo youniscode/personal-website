@@ -1,0 +1,119 @@
+<%- include('partials/html-start', { title: 'Flight Briefing & Route Kit' }) %>
+    <%- include('partials/header') %>
+
+        <section class="section">
+            <div class="container">
+
+                <!-- Header -->
+                <header class="mb-4">
+                    <h1 class="display-6 fw-bolder mb-2">Flight Briefing &amp; Route Kit</h1>
+                    <p class="text-muted">
+                        A pilot helper that plans routes, summarizes METAR/TAF and NOTAMs, and exports a printable route
+                        kit.
+                    </p>
+                </header>
+
+                <!-- Hero / cover -->
+                <!-- Put your files in /public/img/projects/ as: flight-briefing-hero.webp (preferred) and flight-briefing-hero.jpg (fallback) -->
+                <figure class="mb-4">
+                    <picture>
+                        <!-- webp first -->
+                        <source srcset="/img/projects/flight-briefing-thumb.png" type="image/webp" />
+                        <!-- fallback (use your current PNG if you like) -->
+                        <img src="/img/projects/flight-briefing-thumb.png"
+                            alt="Flight Briefing & Route Kit — screenshot"
+                            class="project-hero img-fluid rounded shadow-sm w-100" loading="eager" />
+                    </picture>
+                    <figcaption class="mt-2 small text-muted">
+                        App overview (sample route briefing).
+                    </figcaption>
+                </figure>
+
+                <!-- Two columns -->
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <article class="prose">
+                            <h2>What it does</h2>
+                            <ul>
+                                <li>Search and build routes (origin → waypoints → destination).</li>
+                                <li>Fetch and normalize <strong>METAR</strong> / <strong>TAF</strong> and relevant
+                                    NOTAMs.</li>
+                                <li>Generate a clean, printable <em>Route Kit</em> (PDF/print page).</li>
+                                <li>Save recent routes locally for quick recall.</li>
+                            </ul>
+
+                            <h2>Status</h2>
+                            <p>In development. I’m currently prototyping the route form, data adapters, and the
+                                printable layout.</p>
+
+                            <h2>Roadmap</h2>
+                            <ol>
+                                <li>Route input UI (with validation &amp; waypoint helpers)</li>
+                                <li>Data adapters for METAR/TAF (and caching)</li>
+                                <li>NOTAM summarization &amp; filtering</li>
+                                <li>Printable/PDF route kit layout</li>
+                                <li>“Share route” link + History</li>
+                            </ol>
+                        </article>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h3 class="h6 text-uppercase text-muted mb-3">Tech</h3>
+                                <ul class="list-unstyled small mb-3">
+                                    <li>Node.js + Express</li>
+                                    <li>EJS templates</li>
+                                    <li>Bootstrap (your theme)</li>
+                                    <li>Client-side fetch + caching</li>
+                                </ul>
+
+                                <h3 class="h6 text-uppercase text-muted mb-3">Links</h3>
+                                <div class="d-grid gap-2">
+                                    <% if (project && project.demoUrl) { %>
+                                        <a class="btn btn-primary" href="<%= project.demoUrl %>" target="_blank"
+                                            rel="noopener">
+                                            Live demo
+                                        </a>
+                                        <% } else { %>
+                                            <a class="btn btn-outline-secondary disabled" aria-disabled="true">
+                                                Live demo (coming soon)
+                                            </a>
+                                            <% } %>
+
+                                                <% if (project && project.sourceUrl) { %>
+                                                    <a class="btn btn-outline-dark" href="<%= project.sourceUrl %>"
+                                                        target="_blank" rel="noopener">
+                                                        Source on GitHub
+                                                    </a>
+                                                    <% } else { %>
+                                                        <a class="btn btn-outline-secondary disabled"
+                                                            aria-disabled="true">
+                                                            Source (coming soon)
+                                                        </a>
+                                                        <% } %>
+                                </div>
+
+                                <hr>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <% if (project?.status==='in-progress' ) { %>
+                                        <span class="badge bg-success-subtle text-success-emphasis">In progress</span>
+                                        <% } else if (project?.status==='prototype' ) { %>
+                                            <span class="badge bg-info-subtle text-info-emphasis">Prototype</span>
+                                            <% } else if (project?.status==='coming-soon' ) { %>
+                                                <span class="badge bg-secondary">Coming soon</span>
+                                                <% } else { %>
+                                                    <!-- default/fallback -->
+                                                    <span class="badge bg-secondary">In progress</span>
+                                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <%- include('partials/footer') %>
+            <%- include('partials/html-end') %>
