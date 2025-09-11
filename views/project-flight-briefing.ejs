@@ -4,7 +4,9 @@
         <section class="section">
             <div class="container">
 
-                <!-- Header -->
+                <!-- =========================
+         Header
+    ========================== -->
                 <header class="mb-4">
                     <h1 class="display-6 fw-bolder mb-2">Flight Briefing &amp; Route Kit</h1>
                     <p class="text-muted">
@@ -13,15 +15,16 @@
                     </p>
                 </header>
 
-                <!-- Hero / cover -->
-                <!-- Put your files in /public/img/projects/ as: flight-briefing-hero.webp (preferred) and flight-briefing-hero.jpg (fallback) -->
+                <!-- =========================
+         Hero / cover
+         - Uses a <picture> so you can switch formats later.
+         - Image fills a 16:9 area without stretching.
+    ========================== -->
                 <figure class="mb-4">
                     <picture>
-                        <!-- webp first -->
-                        <source srcset="/img/projects/flight-briefing-thumb.png" type="image/webp" />
-                        <!-- fallback (use your current PNG if you like) -->
-                        <img src="/img/projects/flight-briefing-thumb.png"
-                            alt="Flight Briefing & Route Kit — screenshot"
+                        <!-- If you add a WebP later, change this source to .webp and keep the <img> as a fallback -->
+                        <source srcset="/img/projects/flight-briefing-hero.png" type="image/webp" />
+                        <img src="/img/projects/flight-briefing-hero.png" alt="Flight Briefing & Route Kit — screenshot"
                             class="project-hero img-fluid rounded shadow-sm w-100" loading="eager" />
                     </picture>
                     <figcaption class="mt-2 small text-muted">
@@ -29,8 +32,10 @@
                     </figcaption>
                 </figure>
 
-                <!-- Two columns -->
                 <div class="row g-4">
+                    <!-- =========================
+           Main column
+      ========================== -->
                     <div class="col-md-8">
                         <article class="prose">
                             <h2>What it does</h2>
@@ -43,20 +48,49 @@
                             </ul>
 
                             <h2>Status</h2>
-                            <p>In development. I’m currently prototyping the route form, data adapters, and the
-                                printable layout.</p>
+                            <p>
+                                In development. I’m currently prototyping the route form, data adapters, and the
+                                printable layout.
+                            </p>
 
-                            <h2>Roadmap</h2>
-                            <ol>
-                                <li>Route input UI (with validation &amp; waypoint helpers)</li>
-                                <li>Data adapters for METAR/TAF (and caching)</li>
-                                <li>NOTAM summarization &amp; filtering</li>
-                                <li>Printable/PDF route kit layout</li>
-                                <li>“Share route” link + History</li>
-                            </ol>
+                            <!-- Optional: small changelog list if you pass project.changelog from app.js -->
+                            <% if (project && Array.isArray(project.changelog) && project.changelog.length) { %>
+                                <h2 class="mt-4">Changelog</h2>
+                                <ul class="list-unstyled">
+                                    <% project.changelog.forEach(item=> { %>
+                                        <li class="mb-2">
+                                            <span class="badge bg-light text-dark border me-2">
+                                                <%= item.date %>
+                                            </span>
+                                            <%= item.text %>
+                                        </li>
+                                        <% }) %>
+                                </ul>
+                                <% } %>
+
+                                    <!-- Optional: screenshot grid if you pass project.screens from app.js -->
+                                    <% if (project && Array.isArray(project.screens) && project.screens.length) { %>
+                                        <h2 class="mt-4">Screenshots</h2>
+                                        <div class="row g-3">
+                                            <% project.screens.forEach(s=> { %>
+                                                <div class="col-6 col-lg-4">
+                                                    <!-- data-lightbox triggers the tiny lightbox below -->
+                                                    <a href="<%= s.full %>"
+                                                        class="project-shot d-block ratio ratio-16x9"
+                                                        data-lightbox="proj">
+                                                        <img src="<%= s.thumb %>" alt="<%= s.alt || '' %>"
+                                                            class="w-100 h-100 object-fit-cover rounded border">
+                                                    </a>
+                                                </div>
+                                                <% }) %>
+                                        </div>
+                                        <% } %>
                         </article>
                     </div>
 
+                    <!-- =========================
+           Sidebar
+      ========================== -->
                     <div class="col-md-4">
                         <div class="card shadow-sm">
                             <div class="card-body">
@@ -64,10 +98,14 @@
                                 <ul class="list-unstyled small mb-3">
                                     <li>Node.js + Express</li>
                                     <li>EJS templates</li>
-                                    <li>Bootstrap (your theme)</li>
+                                    <li>Bootstrap (theme)</li>
                                     <li>Client-side fetch + caching</li>
                                 </ul>
 
+                                <!-- Smart links: 
+                 - Live demo always clickable; if no demoUrl, shows an alert.
+                 - Source always links to your GitHub repo (set in app.js).
+            -->
                                 <h3 class="h6 text-uppercase text-muted mb-3">Links</h3>
                                 <div class="d-grid gap-2">
                                     <% if (project && project.demoUrl) { %>
@@ -76,44 +114,183 @@
                                             Live demo
                                         </a>
                                         <% } else { %>
-                                            <a class="btn btn-outline-secondary disabled" aria-disabled="true">
-                                                Live demo (coming soon)
+                                            <a class="btn btn-primary" href="#"
+                                                onclick="alert('🚧 Demo not yet available — check back soon!'); return false;"
+                                                aria-label="Live demo (not yet available)">
+                                                Live demo
                                             </a>
                                             <% } %>
 
-                                                <% if (project && project.sourceUrl) { %>
-                                                    <a class="btn btn-outline-dark" href="<%= project.sourceUrl %>"
-                                                        target="_blank" rel="noopener">
-                                                        Source on GitHub
-                                                    </a>
-                                                    <% } else { %>
-                                                        <a class="btn btn-outline-secondary disabled"
-                                                            aria-disabled="true">
-                                                            Source (coming soon)
-                                                        </a>
-                                                        <% } %>
+                                                <a class="btn btn-outline-secondary"
+                                                    href="<%= project && project.sourceUrl ? project.sourceUrl : '#' %>"
+                                                    target="_blank" rel="noopener" <% if (!(project &&
+                                                    project.sourceUrl)) { %> onclick="alert('Source link not set yet.');
+                                                    return false;" <% } %>
+                                                        >
+                                                        Source
+                                                </a>
                                 </div>
 
-                                <hr>
+                                <!-- Status chips (optional):
+                 Pass project.status as an array, e.g. ['in-progress', 'prototype'].
+            -->
+                                <% if (project && Array.isArray(project.status) && project.status.length) { %>
+                                    <hr>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <% project.status.forEach(s=> { %>
+                                            <span class="badge
+                    <%= s==='in-progress' ? 'bg-success-subtle text-success-emphasis' :
+                        s==='prototype'   ? 'bg-info-subtle text-info-emphasis'    :
+                        s==='coming-soon'  ? 'bg-secondary-subtle text-secondary-emphasis' :
+                                             'bg-light text-dark border' %>">
+                                                <%= s.replace('-', ' ' ) %>
+                                            </span>
+                                            <% }) %>
+                                    </div>
+                                    <% } %>
+                            </div>
+                        </div>
+
+                        <!-- Share block -->
+                        <div class="card mt-3">
+                            <div class="card-body">
+                                <h3 class="h6 text-uppercase text-muted mb-3">Share</h3>
                                 <div class="d-flex flex-wrap gap-2">
-                                    <% if (project?.status==='in-progress' ) { %>
-                                        <span class="badge bg-success-subtle text-success-emphasis">In progress</span>
-                                        <% } else if (project?.status==='prototype' ) { %>
-                                            <span class="badge bg-info-subtle text-info-emphasis">Prototype</span>
-                                            <% } else if (project?.status==='coming-soon' ) { %>
-                                                <span class="badge bg-secondary">Coming soon</span>
-                                                <% } else { %>
-                                                    <!-- default/fallback -->
-                                                    <span class="badge bg-secondary">In progress</span>
-                                                    <% } %>
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                        href="https://twitter.com/intent/tweet?url=<%= encodeURIComponent((meta && meta.url) || '') %>&text=Flight%20Briefing%20%26%20Route%20Kit"
+                                        target="_blank" rel="noopener">X / Twitter</a>
+
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                        href="https://www.linkedin.com/sharing/share-offsite/?url=<%= encodeURIComponent((meta && meta.url) || '') %>"
+                                        target="_blank" rel="noopener">LinkedIn</a>
+
+                                    <button class="btn btn-sm btn-outline-secondary" id="copyLinkBtn" type="button"
+                                        data-url="<%= (meta && meta.url) || '' %>">
+                                        Copy link
+                                    </button>
+                                    <span class="small text-success d-none" id="copyDone">Copied!</span>
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
 
             </div>
         </section>
+
+        <!-- =========================
+     Tiny lightbox (no deps) + copy link
+     - This is scoped to this page only.
+========================== -->
+        <script>
+            // --- Lightbox ---
+            (function () {
+                const overlay = document.createElement('div');
+                overlay.className = 'lb-overlay';
+                overlay.innerHTML = '<img class="lb-img" alt=""><button class="lb-close" aria-label="Close">&times;</button>';
+                document.body.appendChild(overlay);
+
+                const img = overlay.querySelector('.lb-img');
+                const close = overlay.querySelector('.lb-close');
+
+                function open(src) {
+                    img.src = src;
+                    overlay.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                }
+                function hide() {
+                    overlay.classList.remove('show');
+                    img.src = '';
+                    document.body.style.overflow = '';
+                }
+
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay || e.target === close) hide();
+                });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') hide();
+                });
+
+                document.querySelectorAll('[data-lightbox="proj"]').forEach(a => {
+                    a.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        open(a.getAttribute('href'));
+                    });
+                });
+            })();
+
+            // --- Copy link ---
+            (function () {
+                const btn = document.getElementById('copyLinkBtn');
+                const ok = document.getElementById('copyDone');
+                if (!btn) return;
+
+                btn.addEventListener('click', async () => {
+                    const url = btn.getAttribute('data-url') || window.location.href;
+                    try {
+                        await navigator.clipboard.writeText(url);
+                        ok?.classList.remove('d-none');
+                        setTimeout(() => ok?.classList.add('d-none'), 1500);
+                    } catch {
+                        alert('Copy failed. You can copy from the address bar.');
+                    }
+                });
+            })();
+        </script>
+
+        <!-- =========================
+     Scoped styles for this page
+========================== -->
+        <style>
+            .project-hero {
+                /* Keep a clean 16:9 cover without stretching the image */
+                aspect-ratio: 16 / 9;
+                object-fit: cover;
+            }
+
+            /* Lightbox overlay */
+            .lb-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, .85);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity .15s ease;
+                z-index: 1055;
+            }
+
+            .lb-overlay.show {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            .lb-img {
+                max-width: 92vw;
+                max-height: 88vh;
+                border-radius: .5rem;
+                box-shadow: 0 1rem 3rem rgba(0, 0, 0, .5);
+            }
+
+            .lb-close {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                border: 0;
+                background: #fff;
+                color: #000;
+                width: 2.5rem;
+                height: 2.5rem;
+                line-height: 2.5rem;
+                border-radius: 50%;
+                font-size: 1.25rem;
+                cursor: pointer;
+                box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .25);
+            }
+        </style>
 
         <%- include('partials/footer') %>
             <%- include('partials/html-end') %>

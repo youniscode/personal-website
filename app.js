@@ -250,7 +250,12 @@ app.get("/projects", (req, res) => {
 });
 
 // Project detail: Flight Briefing & Route Kit
+// Project detail: Flight Briefing & Route Kit
+// Project detail: Flight Briefing & Route Kit
+// Project detail: Flight Briefing & Route Kit
 app.get("/projects/flight-briefing", (req, res) => {
+    const demoUrl = process.env.FLIGHT_BRIEFING_DEMO_URL || null;
+
     res.locals.meta = {
         ...res.locals.meta,
         title: `Flight Briefing & Route Kit • ${app.locals.site.name}`,
@@ -259,23 +264,27 @@ app.get("/projects/flight-briefing", (req, res) => {
         url: absUrl(req, "/projects/flight-briefing"),
         canonical: absUrl(req, "/projects/flight-briefing"),
         type: "website",
-        image: absUrl(req, "/img/projects/flight-briefing-thumb.png"),
+        image: absUrl(req, "/img/projects/flight-briefing-hero.jpg"),
     };
 
     res.render("project-flight-briefing", {
         title: "Flight Briefing & Route Kit",
         project: {
-            // Enable the blue button when you have a live URL:
-            demoUrl: null, // e.g. "https://flight-briefing.onrender.com"
-
-            // Your real GitHub repo URL:
+            demoUrl, // ✅ will be a real URL when you set FLIGHT_BRIEFING_DEMO_URL
             sourceUrl: "https://github.com/youniscode/flight-briefing-kit",
-
-            // 'in-progress' | 'prototype' | 'coming-soon'
-            status: "in-progress",
+            status: ["in-progress", "prototype"],
+            screens: [
+                // { thumb: "/img/projects/fb-01-thumb.jpg", full: "/img/projects/fb-01.jpg", alt: "Route form" },
+            ],
+            changelog: [
+                { date: "2025-09-10", text: "Initial detail page + GitHub repo link." },
+            ],
         },
     });
 });
+
+
+
 
 
 
